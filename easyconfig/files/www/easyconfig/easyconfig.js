@@ -2134,13 +2134,9 @@ var physicalports = [];
 var portsmapping = [];
 var simslot = {};
 
-function portlabel(port) {
-	for (const map of portsmapping) {
-		if (map[port]) {
-			return map[port];
-		}
-	}
-	return port.toUpperCase();
+function portLabel(port) {
+	const found = portsmapping.find(p => p.port === port);
+	return found ? found.name : port.toUpperCase();
 }
 
 function showstatus() {
@@ -2189,10 +2185,19 @@ function showstatus() {
 			if ((data.ports).length > 0) {
 				physicalports = data.ports;
 				portsmapping = data.ports_mapping;
-				var sorted = naturalSortJSON(data.ports, 'port');
+				var sorted;
+				if (portsmapping.length > 0) {
+					data.ports.forEach(e => {
+						const found = portsmapping.find(p => p.port === e.port);
+						e.id = found ? found.id : 0;
+					});
+					sorted = sortJSON(data.ports, 'id', 'asc');
+				} else {
+					sorted = naturalSortJSON(data.ports, 'port');
+				}
 				var html = '<center><table><tr>';
 				for (var idx = 0; idx < sorted.length; idx++) {
-					html += '<td style="padding:5px;text-align:center"' + (sorted[idx].macs > 0 ? ' title="Połączonych klientów: ' + sorted[idx].macs + '"' : '') + '><i data-feather="wire' + (sorted[idx].speed > 0 ? '2' : '1')  + '">x</i><br>' + portlabel(sorted[idx].port);
+					html += '<td style="padding:5px;text-align:center"' + (sorted[idx].macs > 0 ? ' title="Połączonych klientów: ' + sorted[idx].macs + '"' : '') + '><i data-feather="wire' + (sorted[idx].speed > 0 ? '2' : '1')  + '">x</i><br>' + portLabel(sorted[idx].port);
 					html += '<br>' + networkspeed(sorted[idx].speed);
 					html += '</td>';
 					if (((idx + 1) % 5) == 0 && (idx + 1) < sorted.length) {
@@ -4140,7 +4145,7 @@ function clientscallback(sortby) {
 					html += 'przewodowo';
 					var obj = physicalports.find(o => o.port === sorted[idx].port);
 					if (obj) {
-						html += ' ' + portlabel(sorted[idx].port);
+						html += ' ' + portLabel(sorted[idx].port);
 					}
 					html += ', ' + (sorted[idx].network).escapeHTML() + '</div>';
 				} else {
@@ -4160,7 +4165,7 @@ function clientscallback(sortby) {
 					html += 'przewodowo';
 					var obj = physicalports.find(o => o.port === sorted[idx].port);
 					if (obj) {
-						html += '<br>' + portlabel(sorted[idx].port);
+						html += '<br>' + portLabel(sorted[idx].port);
 					}
 					html += '</div>';
 					html += '<div class="col-xs-2"></div>';
@@ -4494,7 +4499,7 @@ function hostinfo(id) {
 		if (host.type == 1) {
 			var obj = physicalports.find(o => o.port === host.port);
 			if (obj) {
-				html += createRowForModal('Port', portlabel(host.port));
+				html += createRowForModal('Port', portLabel(host.port));
 			}
 		}
 		if (host.type == 2) {

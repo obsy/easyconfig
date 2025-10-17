@@ -124,13 +124,9 @@ for IFNAME in $TPORTS1; do
 done
 echo '"ports":['$PORTS'],'
 echo '"ports_swconfig":['$PORTS_SWCONFIG'],'
-echo '"ports_mapping":['
-case "$(cat /tmp/sysinfo/board_name)" in
-	"teltonika,rut955"*)
-		echo '{"eth1":"WAN"}'
-		;;
-esac
-echo '],'
+echo '"ports_mapping":'
+jsonfilter -q -i /etc/board_ports.json -e '@' || echo '[]'
+echo ','
 }
 
 show_status() {
