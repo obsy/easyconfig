@@ -7858,7 +7858,17 @@ function subnet2Mask(subnet) {
 
 function shownetworks() {
 	ubus_call('"easyconfig", "networks", {}', function(data) {
-		var ports = naturalSortJSON(data.ports, 'port');
+		var ports;
+		if (data.ports_mapping.length > 0) {
+			data.ports.forEach(e => {
+				const found = data.ports_mapping.find(p => p.port === e.port);
+				e.id = found ? found.id : 0;
+			});
+			ports = sortJSON(data.ports, 'id', 'asc');
+		} else {
+			ports = naturalSortJSON(data.ports, 'port');
+		}
+		portsmapping = data.ports_mapping;
 		var ipaddrs = [];
 		var has_wireless = config.wlan_devices.length;
 
@@ -8030,7 +8040,7 @@ function networkdetails(data) {
 			html = ('<div>' + document.getElementById('div_network_wire_template').innerHTML + '</div>').replaceAll('_idx', '_' + i);
 			document.getElementById('div_network_interfaces_content').insertAdjacentHTML('beforeend', html);
 			setValue('network_port_data_' + i, btoa(JSON.stringify(json.ports[i])));
-			setValue('network_port_label_' + i, json.ports[i].port.toUpperCase());
+			setValue('network_port_label_' + i, portLabel(json.ports[i].port));
 			setValue('network_port_' + i, json.wire.indexOf(json.ports[i].port) > -1);
 			var desc = json.ports[i].description == '' ? json.ports[i].network : (json.ports[i].description).escapeHTML();
 			if (desc == 'lan') { desc = 'Sieć lokalna'; }

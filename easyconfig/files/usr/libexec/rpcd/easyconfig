@@ -2372,6 +2372,9 @@ show_networks() {
 		done
 	fi
 	echo '],'
+	echo '"ports_mapping":'
+	jsonfilter -q -i /etc/board_ports.json -e '@' || echo '[]'
+	echo ','
 	echo '"networks":['
 	NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
 	for SEC in $NETWORKS; do
