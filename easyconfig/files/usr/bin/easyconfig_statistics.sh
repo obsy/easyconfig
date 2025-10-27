@@ -26,6 +26,7 @@ if [ ! -e $DB ]; then
 	fi
 fi
 
+LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
 NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
 for SEC in $NETWORKS; do
 	[ "$SEC" = "loopback" ] && continue
@@ -45,14 +46,14 @@ for SEC in $NETWORKS; do
 			if [ -e $I/phy80211 ]; then
 				STATIONS=$(iw dev "$IFNAME" station dump | awk -v IFNAME="$IFNAME" '{if($1 == "Station") {MAC=$2;station[MAC]=1} if($0 ~ /rx bytes:/) {rx[MAC]=$3} if($0 ~ /tx bytes:/) {tx[MAC]=$3} if($0 ~ /connected time:/) {connected[MAC]=$3}} END {for (w in station) {printf "%s;%s;%s;%s;%s\n", w, IFNAME, tx[w], rx[w], connected[w]}}')
 				for S in $STATIONS; do
-					DHCPNAME=$(awk '/'$(echo "$S" | cut -f1 -d";")'/{if ($4 != "*") {print $4}}' /tmp/dhcp.leases)
+					DHCPNAME=$(awk '/'$(echo "$S" | cut -f1 -d";")'/{if ($4 != "*") {print $4}}' $LEASEFILE)
 					easyconfig_statistics.uc ${S//;/ } "$DHCPNAME" 2 "$NETWORK"
 				done
 			else
 				PORTID=$(printf "%d" $(cat /sys/class/net/$BRIDGE/brif/$IFNAME/port_no))
 				STATIONS=$(echo "$T" | awk '/^\s*'$PORTID'\s.*no/{print $2}' | sort -u)
 				for S in $STATIONS; do
-					DHCPNAME=$(awk '/'$S'/{if ($4 != "*") {print $4}}' /tmp/dhcp.leases)
+					DHCPNAME=$(awk '/'$S'/{if ($4 != "*") {print $4}}' $LEASEFILE)
 					easyconfig_statistics.uc "$S" "$IFNAME" 0 0 999 "$DHCPNAME" 1 "$NETWORK"
 				done
 			fi

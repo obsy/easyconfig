@@ -121,6 +121,7 @@ update_entry() {
 }
 
 # lan
+LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
 BRIDGE=$(ubus call network.interface.lan status | jsonfilter -q -e @.l3_device)
 if [ -e /sys/class/net/$BRIDGE/bridge ]; then
 	T=$(brctl showmacs $BRIDGE 2>/dev/null)
@@ -129,14 +130,14 @@ if [ -e /sys/class/net/$BRIDGE/bridge ]; then
 		if [ -e $I/phy80211 ]; then
 			STATIONS=$(iw dev "$IFNAME" station dump | awk -v IFNAME="$IFNAME" '{if($1 == "Station") {MAC=$2;station[MAC]=1} if($0 ~ /rx bytes:/) {rx[MAC]=$3} if($0 ~ /tx bytes:/) {tx[MAC]=$3} if($0 ~ /connected time:/) {connected[MAC]=$3}} END {for (w in station) {printf "%s;%s;%s;%s;%s\n", w, IFNAME, tx[w], rx[w], connected[w]}}')
 			for S in $STATIONS; do
-				DHCPNAME=$(awk '/'$(echo "$S" | cut -f1 -d";")'/{if ($4 != "*") {print $4}}' /tmp/dhcp.leases)
+				DHCPNAME=$(awk '/'$(echo "$S" | cut -f1 -d";")'/{if ($4 != "*") {print $4}}' $LEASEFILE)
 				update_entry $(echo "$S" | cut -f1 -d";") $(echo "$S" | cut -f2 -d";") $(echo "$S" | cut -f3 -d";") $(echo "$S" | cut -f4 -d";") $(echo "$S" | cut -f5 -d";") "$DHCPNAME" 2
 			done
 		else
 			PORTID=$(printf "%d" $(cat /sys/class/net/$BRIDGE/brif/$IFNAME/port_no))
 			STATIONS=$(echo "$T" | awk '/^\s*'$PORTID'\s.*no/{print $2}')
 			for S in $STATIONS; do
-				DHCPNAME=$(awk '/'$S'/{if ($4 != "*") {print $4}}' /tmp/dhcp.leases)
+				DHCPNAME=$(awk '/'$S'/{if ($4 != "*") {print $4}}' $LEASEFILE)
 				update_entry "$S" "$IFNAME" 0 0 999 "$DHCPNAME" 1
 			done
 		fi

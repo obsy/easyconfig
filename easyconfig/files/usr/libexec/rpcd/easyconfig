@@ -915,6 +915,7 @@ client_data() {
 }
 
 show_clients() {
+LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
 NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
 WIRELESSSTATUS=$(ubus call network.wireless status || echo '{}')
 TPORTS1=""
@@ -952,7 +953,7 @@ for SEC in $NETWORKS; do
 					grep -qi "^he supported" /sys/kernel/debug/ieee80211/*/*/stations/${MAC}/he_capa 2>/dev/null && CAPA=',"capa":6'
 					grep -qi "^eht supported" /sys/kernel/debug/ieee80211/*/*/stations/${MAC}/eht_capa 2>/dev/null && CAPA=',"capa":7'
 
-					IP=$(awk '/'${MAC}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"%s\"", $3, $4}' /tmp/dhcp.leases)
+					IP=$(awk '/'${MAC}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"%s\"", $3, $4}' $LEASEFILE)
 					[ -z "$IP" ] && IP=$(awk '/0x[26]\s*'${MAC}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"\"", $1; exit}' /proc/net/arp)
 					[ -z "$IP" ] && IP=',"ip":"","dhcpname":""'
 
@@ -962,7 +963,7 @@ for SEC in $NETWORKS; do
 				TPORTS1="${TPORTS1} ${IFNAME};0"
 				PORTID=$(printf "%d" $(cat /sys/class/net/$BRIDGE/brif/$IFNAME/port_no))
 				for M in $(echo "$BRIDGEMACS" | awk '/^\s*'$PORTID'\s.*no/{print $2}' | sort -u); do
-					IP=$(awk '/'${M}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"%s\"", $3, $4}' /tmp/dhcp.leases)
+					IP=$(awk '/'${M}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"%s\"", $3, $4}' $LEASEFILE)
 					[ -z "$IP" ] && IP=$(awk '/0x[26]\s*'${M}'/{printf ",\"ip\":\"%s\",\"dhcpname\":\"\"", $1; exit}' /proc/net/arp)
 					[ -z "$IP" ] && IP=',"ip":"","dhcpname":""'
 					echo "{\"mac\":\"$M\",\"active\":true,\"type\":1,\"port\":\"${IFNAME}\",\"section\":\"${SEC}\",\"network\":\"${NETWORK}\"$(client_data $M)${IP}},"
@@ -1370,6 +1371,7 @@ show_sms() {
 show_queries() {
 	echo '{"result":['
 
+	LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
 	T=$(logread -e "query\[A\]\|NXDOMAIN" | awk '
 $10 ~ /query\[A\]/ && $13 !~ /127.0.0.1/ && $13 !~ /::1/ {gsub(":", "", $4);LINE[$9]=sprintf("\"id\":%d,\"time\":\"%s%02d%02d%s\",\"query\":\"%s\",\"host\":\"%s\",\"nxdomain\":", NR, $5, (match("JanFebMarAprMayJunJulAugSepOctNovDec",$2)+2)/3, $3, $4, $11, $13); NXDOMAIN[$9]="false"}
 $13 ~ /NXDOMAIN/ {NXDOMAIN[$9]="true"}
@@ -1378,9 +1380,9 @@ END {for (T in LINE) {printf "{%s%s},\n", LINE[T], NXDOMAIN[T]}}
 	IPS=$(echo "$T" | sed 's/.*"host":"\(.*\)",.*/\1/g' | sort -u)
 
 	for IP in $IPS; do
-		MAC=$(awk '/'$IP'/{print $2}' /tmp/dhcp.leases)
+		MAC=$(awk '/'$IP'/{print $2}' $LEASEFILE)
 		if [ -n "$MAC" ]; then
-			DHCPNAME=$(awk '/'$IP'/{print $4}' /tmp/dhcp.leases)
+			DHCPNAME=$(awk '/'$IP'/{print $4}' $LEASEFILE)
 			[ "x$DHCPNAME" = "x*" ] && DHCPNAME=""
 		else
 			MAC=$(awk '/'$IP'/{print $4}' /proc/net/arp)
