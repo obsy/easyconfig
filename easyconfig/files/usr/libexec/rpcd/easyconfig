@@ -939,7 +939,7 @@ for SEC in $NETWORKS; do
 			if [ -e $I/phy80211 ]; then
 				TSECTION=""
 				TBAND=""
-				eval $(echo "$WIRELESSSTATUS" | jsonfilter -q -e 'TSECTION=@.*.interfaces[@.config.network[*]="'$SEC'" && @.ifname="'$IFNAME'"].section' -e 'TBAND=@[@.interfaces[*].config.network[*]="'$SEC'" && @.interfaces[*].ifname="'$IFNAME'"].config.band')
+				eval $(jsonfilter -s "$WIRELESSSTATUS" -q -e 'TSECTION=@.*.interfaces[@.config.network[*]="'$SEC'" && @.ifname="'$IFNAME'"].section' -e 'TBAND=@[@.interfaces[*].config.network[*]="'$SEC'" && @.interfaces[*].ifname="'$IFNAME'"].config.band')
 				PHY=$(iwinfo nl80211 phyname $(uci -q get wireless.${TSECTION}.device))
 				BAND=2
 				[ "x$TBAND" = "x5g" ] && BAND=5
@@ -1755,7 +1755,7 @@ show_vpn_up()
 			for ZT in $ZTS; do
 				UP="false"
 				ID=$(uci get zerotier.$ZT.id)
-				T=$(echo "$LN" | jsonfilter -q -e '@[@.id="'$ID'"].status')
+				T=$(jsonfilter -s "$LN" -q -e '@[@.id="'$ID'"].status')
 				[ "x$T" = "xOK" ] && UP="true"
 				echo "{\"interface\":\"\",\"section\":\"$ZT\",\"up\":${UP:-false}},"
 			done
@@ -1763,7 +1763,7 @@ show_vpn_up()
 	fi
 
 	T=$(ubus call network.interface dump)
-	INTERFACES=$(echo "$T" | jsonfilter -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
+	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
 
 	if [ -e /etc/config/openvpn ]; then
 		OVPNS=$(uci show openvpn | awk -F[.=] '/\.config=/{print $2}')
@@ -1788,7 +1788,7 @@ show_vpn_up()
 		if echo "$INTERFACE" | grep -q ":"; then
 			INTERFACE=$(echo "$INTERFACE" | cut -f1 -d:)
 		fi
-		UP=$(echo "$T" | jsonfilter -q -e '@.interface[@.interface="'$INTERFACE'"].up')
+		UP=$(jsonfilter -s "$T" -q -e '@.interface[@.interface="'$INTERFACE'"].up')
 		echo "{\"interface\":\"$INTERFACE\",\"up\":${UP:-false}},"
 	done
 	echo "]}"
@@ -1799,7 +1799,7 @@ show_vpn()
 	echo '{"result":['
 
 	T=$(ubus call network.interface dump)
-	INTERFACES=$(echo "$T" | jsonfilter -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
+	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
 
 	if [ -e /etc/config/openvpn ]; then
 		OVPNS=$(uci show openvpn | awk -F[.=] '/\.config=/{print $2}')
@@ -1830,13 +1830,13 @@ show_vpn()
 			UP="false"
 			PENDING="false"
 			ID=$(uci get zerotier.$ZT.id)
-			DEVICE=$(echo "$LN" | jsonfilter -q -e '@[@.id="'$ID'"].portDeviceName')
+			DEVICE=$(jsonfilter -s "$LN" -q -e '@[@.id="'$ID'"].portDeviceName')
 			[ -z "$DEVICE" ] && DEVICE=$(awk -F[=] '/^'$ID'=zt/{print $2}' /etc/zerotier/devicemap 2>/dev/null)
 			[ -n "$DEVICE" ] && INTERFACE=$(uci show network | awk -F. '/device='\'''${DEVICE}''\''$/{print $2}')
 			if [ -n "$INTERFACE" ]; then
 				INTERFACES="${INTERFACES} ${INTERFACE}:zerotier:${ZT}"
 			else
-				T1=$(echo "$LN" | jsonfilter -q -e '@[@.id="'$ID'"].status')
+				T1=$(jsonfilter -s "$LN" -q -e '@[@.id="'$ID'"].status')
 				[ "x$T1" = "xOK" ] && UP="true"
 				[ "x$T1" = "xREQUESTING_CONFIGURATION" ] && PENDING="true"
 				echo "{\"interface\":\"\",\"section\":\"$ZT\",\"up\":${UP:-false},\"pending\":${PENDING:-false},\"uptime\":\"\",\"proto\":\"zerotier\",\"name\":\""$(escapeJSON "${NAME:-$ZT}")"\"},"
@@ -1845,18 +1845,19 @@ show_vpn()
 	fi
 
 	for INTERFACE in $INTERFACES; do
+		TPROTO=""
 		if echo "$INTERFACE" | grep -q ":"; then
 			TPROTO=$(echo "$INTERFACE" | cut -f2 -d:)
 			SEC=$(echo "$INTERFACE" | cut -f3 -d:)
 			INTERFACE=$(echo "$INTERFACE" | cut -f1 -d:)
 		fi
-		UP=$(echo "$T" | jsonfilter -q -e '@.interface[@.interface="'$INTERFACE'"].up')
+		UP=$(jsonfilter -s "$T" -q -e '@.interface[@.interface="'$INTERFACE'"].up')
 		UPTIME=""
 		if [ "x$UP" = "xtrue" ]; then
-			UPTIME=$(echo "$T" | jsonfilter -q -e '@.interface[@.interface="'$INTERFACE'"].uptime')
+			UPTIME=$(jsonfilter -s "$T" -q -e '@.interface[@.interface="'$INTERFACE'"].uptime')
 		fi
-		PENDING=$(echo "$T" | jsonfilter -q -e '@.interface[@.interface="'$INTERFACE'"].pending')
-		PROTO=$(echo "$T" | jsonfilter -q -e '@.interface[@.interface="'$INTERFACE'"].proto')
+		PENDING=$(jsonfilter -s "$T" -q -e '@.interface[@.interface="'$INTERFACE'"].pending')
+		PROTO=$(jsonfilter -s "$T" -q -e '@.interface[@.interface="'$INTERFACE'"].proto')
 		if [ "x$PROTO" = "xnone" ]; then
 			[ -n "$TPROTO" ] && PROTO=$TPROTO
 		fi
@@ -1964,13 +1965,12 @@ show_vpn_status_zerotier()
 
 	echo "{\"network\":"
 
-	LN=$(zerotier-cli -j listnetworks 2>/dev/null)
 	ID=$(uci -q get zerotier.$section.id)
 	IPADDR=""
 	NAME=""
 	STATUS=""
 	TYPE=""
-	eval $(echo "$LN" | jsonfilter -q -e 'IPADDR=@[@.id="'$ID'"].assignedAddresses[0]' -e 'NAME=@[@.id="'$ID'"].name' -e 'STATUS=@[@.id="'$ID'"].status' -e 'TYPE=@[@.id="'$ID'"].type')
+	eval $(zerotier-cli -j listnetworks 2>/dev/null | jsonfilter -q -e 'IPADDR=@[@.id="'$ID'"].assignedAddresses[0]' -e 'NAME=@[@.id="'$ID'"].name' -e 'STATUS=@[@.id="'$ID'"].status' -e 'TYPE=@[@.id="'$ID'"].type')
 	echo "{\"id\":\"$ID\",\"name\":\""$(escapeJSON "$NAME")"\",\"ipaddr\":\"$IPADDR\",\"status\":\"$STATUS\",\"type\":\"$TYPE\"},"
 	echo "}"
 }
