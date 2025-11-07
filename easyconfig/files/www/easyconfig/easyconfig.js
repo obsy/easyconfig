@@ -623,7 +623,7 @@ function okdetectwan() {
 	cmd.push('uci -q del network.wan');
 	cmd.push('uci set network.wan=interface');
 
-	if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi') {
+	if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi' || data.proto == 'xmm') {
 		cmd.push('uci set network.wan.proto=' + data.proto);
 		cmd.push('uci set network.wan.device=\\\"' + data.device + '\\\"');
 		cmd.push('uci set network.wan.apn=\\\"' + data.apn + '\\\"');
@@ -683,7 +683,7 @@ function detectwan(pin) {
 			if (data.proto == 'dhcp' || data.proto == 'dhcp_hilink') {
 				msg += '<div class="col-xs-6 text-left">' + wan[data.proto] +  '</div>';
 			}
-			if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi') {
+			if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi' || data.proto == 'xmm') {
 				msg += '<div class="col-xs-6 text-left">' + wan[data.proto] +  '</div>';
 				msg += '</div>';
 				msg += '<div class="row space">';
@@ -718,7 +718,7 @@ function enableWan(proto) {
 	if (proto == 'pppoe') {
 		fields = ['wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei'];
 	}
-	if (proto == 'mbim') {
+	if (proto == 'mbim' || proto == 'xmm') {
 		fields = ['wan_apn', 'wan_device', 'wan_pincode'];
 	}
 	if (proto == 'modemmanager') {
@@ -796,7 +796,7 @@ function enableWan(proto) {
 		setElementEnabled('wan_dashboard_url', true, false);
 	}
 
-	if (proto == '3g' || proto == 'mbim' || proto == 'ncm' || proto == 'qmi') {
+	if (proto == '3g' || proto == 'mbim' || proto == 'ncm' || proto == 'qmi' || proto == 'xmm') {
 		modem = 1;
 		setDisplay('menu_ussdsms', config.services.ussdsms);
 		setDisplay('div_status_modem', true);
@@ -1164,6 +1164,7 @@ wan['modemmanager'] = 'Modem komórkowy';
 wan['ncm'] = 'Modem komórkowy (NCM)';
 wan['qmi'] = 'Modem komórkowy (QMI)';
 wan['dhcp_hilink'] = 'Modem komórkowy (HiLink lub RNDIS)';
+wan['xmm'] = 'Modem komórkowy Fibocom L850/L860/FM350';
 wan['-'] = ' ';
 wan['detect'] = 'Wykryj...';
 
@@ -1596,7 +1597,7 @@ function saveconfig() {
 			}
 			use_wanport = false;
 		}
-		if (wan_type == '3g' || wan_type == 'mbim' || wan_type == 'modemmanager' || wan_type == 'ncm' || wan_type == 'qmi') {
+		if (wan_type == '3g' || wan_type == 'mbim' || wan_type == 'modemmanager' || wan_type == 'ncm' || wan_type == 'qmi' || wan_type == 'xmm') {
 			cmd.push('uci set network.wan.apn=\\\"' + getValue('wan_apn') + '\\\"');
 			cmd.push('uci set network.wan.device=\\\"' + getValue('wan_device' + (wan_type == 'modemmanager' ? '_mm' : '')) + '\\\"');
 			cmd.push('uci set network.wan.pincode=' + getValue('wan_pincode'));

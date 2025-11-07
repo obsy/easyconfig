@@ -523,6 +523,8 @@ echo '"wan_protos":["none"'
 T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
 if [ -n "$T" ]; then
 	echo ',"ncm"'
+elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a"; then
+	echo ',"xmm"'
 else
 	if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 		echo ',"dhcp","static"'
@@ -1456,7 +1458,7 @@ pincode()
 	json_load "$input"
 	json_get_vars proto device pincode
 
-	if [ "x$proto" = "x3g" ] || [ "x$proto" = "xncm" ]; then
+	if [ "x$proto" = "x3g" ] || [ "x$proto" = "xncm" ] || [ "x$proto" = "xxmm" ]; then
 		PINCODE="$pincode" gcom -d "$device" -s /etc/gcom/setpin.gcom >/dev/null 2>&1
 	fi
 	if [ "x$proto" = "xqmi" ]; then
@@ -1467,6 +1469,29 @@ pincode()
 
 detect_wan()
 {
+# Fibocom L850/L860/FM350
+if grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a"; then
+	ifdown wan
+	DEVICE=""
+	DEVICES=$(ls /dev/ttyUSB* /dev/ACM* 2>/dev/null)
+	for D in $DEVICES; do
+		O=$(gcom -d $D -s /usr/share/easyconfig/modem/checkext.gcom)
+		if echo "$O" | grep -q "SIM PIN"; then
+			echo '{"proto":"xmm","device":"'$D'","action":"pinrequired"}'
+			exit 0
+		fi
+		if echo "$O" | grep -q "+CPIN"; then
+			DEVICE=$D
+			break
+		fi
+	done
+	if [ -n "$DEVICE" ]; then
+		APN=$(echo $O | awk -F, '/^\+CGDCONT: 1/{print $3}' | xargs)
+		echo '{"proto":"xmm","device":"'$DEVICE'","apn":"'${APN:-internet}'"}'
+		exit 0
+	fi
+fi
+
 # modem usb qmi
 	T=$(grep qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null)
 	if [ -n "$T" ]; then
