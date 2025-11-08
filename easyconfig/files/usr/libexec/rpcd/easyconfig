@@ -520,38 +520,26 @@ echo '"wan_keepalive":"'$(escapeJSON "$WAN_KEEPALIVE")'",'
 echo '"wan_waninlan":'$WAN_WANINLAN','
 
 echo '"wan_protos":["none"'
+if [ -n "$WAN_IFNAME_DEFAULT" ]; then
+	echo ',"dhcp","static"'
+	[ -f /usr/lib/pppd/*/pppoe.so ] && echo ',"pppoe"'
+fi
+[ -n "$WAN_IFNAME_HILINK" ] && echo ',"dhcp_hilink"'
 T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
 if [ -n "$T" ]; then
 	echo ',"ncm"'
-elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a"; then
+elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
 	echo ',"xmm"'
 else
-	if [ -n "$WAN_IFNAME_DEFAULT" ]; then
-		echo ',"dhcp","static"'
-		[ -f /usr/lib/pppd/*/pppoe.so ] && echo ',"pppoe"'
-	fi
 	tty=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null)
-	if [ -n "$tty" ]; then
-		echo ',"3g"'
-	fi
+	[ -n "$tty" ] && echo ',"3g"'
 	mbim=$(grep cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$mbim" ]; then
-		echo ',"mbim"'
-	fi
-	if [ -e /lib/netifd/proto/modemmanager.sh ]; then
-		echo ',"modemmanager"'
-	fi
+	[ -n "$mbim" ] && echo ',"mbim"'
+	[ -e /lib/netifd/proto/modemmanager.sh ] && echo ',"modemmanager"'
 	ncm=$(grep cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$ncm" ]; then
-		echo ',"ncm"'
-	fi
+	[ -n "$ncm" ] && echo ',"ncm"'
 	qmi=$(grep qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$qmi" ]; then
-		echo ',"qmi"'
-	fi
-	if [ -n "$WAN_IFNAME_HILINK" ]; then
-		echo ',"dhcp_hilink"'
-	fi
+	[ -n "$qmi" ] && echo ',"qmi"'
 fi
 echo '],'
 
@@ -1470,7 +1458,7 @@ pincode()
 detect_wan()
 {
 # Fibocom L850/L860/FM350
-if grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a"; then
+if grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
 	ifdown wan
 	DEVICE=""
 	DEVICES=$(ls /dev/ttyUSB* /dev/ACM* 2>/dev/null)
