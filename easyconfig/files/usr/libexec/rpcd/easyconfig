@@ -525,21 +525,30 @@ if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	[ -f /usr/lib/pppd/*/pppoe.so ] && echo ',"pppoe"'
 fi
 [ -n "$WAN_IFNAME_HILINK" ] && echo ',"dhcp_hilink"'
-T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
+T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices 2>/dev/null) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
 if [ -n "$T" ]; then
-	echo ',"ncm"'
-elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
-	echo ',"xmm"'
+	[ -e /lib/netifd/proto/ncm.sh ] && echo ',"ncm"'
+elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices 2>/dev/null; then
+	[ -e /lib/netifd/proto/xmm.sh ] && echo ',"xmm"'
 else
-	tty=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null)
-	[ -n "$tty" ] && echo ',"3g"'
-	mbim=$(grep cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null)
-	[ -n "$mbim" ] && echo ',"mbim"'
+	T=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null)
+	if [ -n "$T" ]; then
+		[ -e /lib/netifd/proto/3g.sh ] && echo ',"3g"'
+	fi
+
+	if grep -q cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null; then
+		[ -e /lib/netifd/proto/mbim.sh ] && echo ',"mbim"'
+	fi
+
 	[ -e /lib/netifd/proto/modemmanager.sh ] && echo ',"modemmanager"'
-	ncm=$(grep cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null)
-	[ -n "$ncm" ] && echo ',"ncm"'
-	qmi=$(grep qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null)
-	[ -n "$qmi" ] && echo ',"qmi"'
+
+	if grep -q cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null; then
+		[ -e /lib/netifd/proto/ncm.sh ] && echo ',"ncm"'
+	fi
+
+	if grep -q qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null; then
+		[ -e /lib/netifd/proto/qmi.sh ] && echo ',"qmi"'
+	fi
 fi
 echo '],'
 
