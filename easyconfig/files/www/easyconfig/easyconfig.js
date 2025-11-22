@@ -629,7 +629,7 @@ function okdetectwan() {
 		cmd.push('uci set network.wan.apn=\\\"' + data.apn + '\\\"');
 		cmd.push('uci set network.wan.pincode=' + data.pincode);
 	}
-	if (data.proto == 'dhcp' || data.proto == 'dhcp_hilink') {
+	if (data.proto == 'dhcp' || data.proto == 'dhcp_rndis') {
 		cmd.push('uci set network.wan.proto=dhcp');
 		if (config.devicesection) {
 			cmd.push('uci set network.wan.device=' + data.ifname);
@@ -680,8 +680,14 @@ function detectwan(pin) {
 			msg += '<div class="row space"><div class="col-xs-12 text-center">Proponowane ustawienia<hr></div></div>';
 			msg += '<div class="row space">';
 			msg += '<div class="col-xs-6 text-right">Typ połączenia</div>';
-			if (data.proto == 'dhcp' || data.proto == 'dhcp_hilink') {
+			if (data.proto == 'dhcp' || data.proto == 'dhcp_rndis') {
 				msg += '<div class="col-xs-6 text-left">' + wan[data.proto] +  '</div>';
+			}
+			if (data.proto == 'dhcp_rndis') {
+				msg += '</div>';
+				msg += '<div class="row space">';
+				msg += '<div class="col-xs-6 text-right">Urządzenie</div>';
+				msg += '<div class="col-xs-6 text-left">' + data.ifname + '</div>';
 			}
 			if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi' || data.proto == 'xmm') {
 				msg += '<div class="col-xs-6 text-left">' + wan[data.proto] +  '</div>';
@@ -714,6 +720,9 @@ function enableWan(proto) {
 	var fields = [];
 	if (proto == 'static') {
 		fields = ['wan_ipaddr', 'wan_gateway', 'wan_dns1', 'wan_dns2'];
+	}
+	if (proto == 'dhcp_rndis') {
+		fields = ['wan_device_rndis'];
 	}
 	if (proto == 'pppoe') {
 		fields = ['wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei'];
@@ -759,7 +768,7 @@ function enableWan(proto) {
 		setValue('wan_lanto_interface2', tmp);
 	}
 
-	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
+	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_rndis', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
 	for (var idx = 0; idx < all.length; idx++) {
 		setElementEnabled(all[idx], false, false);
 	}
@@ -791,7 +800,7 @@ function enableWan(proto) {
 	setCookie('easyconfig_status_wan', (proto != 'none' ? '1' : '0'));
 	document.getElementById('wan_proto').setAttribute('data-prev', getValue('wan_proto'));
 
-	if (proto == 'dhcp_hilink' && config.wan_ifname == config.wan_ifname_hilink && config.wan_dashboard_url) {
+	if (proto == 'dhcp_rndis' && config.wan_ifnames_rndis.includes(config.wan_ifname) && config.wan_dashboard_url) {
 		document.getElementById('wan_dashboard_url').setAttribute('href', config.wan_dashboard_url);
 		setElementEnabled('wan_dashboard_url', true, false);
 	}
@@ -1163,7 +1172,7 @@ wan['mbim'] = 'Modem komórkowy (MBIM)';
 wan['modemmanager'] = 'Modem komórkowy';
 wan['ncm'] = 'Modem komórkowy (NCM)';
 wan['qmi'] = 'Modem komórkowy (QMI)';
-wan['dhcp_hilink'] = 'Modem komórkowy (HiLink lub RNDIS)';
+wan['dhcp_rndis'] = 'Modem komórkowy (HiLink lub RNDIS)';
 wan['xmm'] = 'Modem komórkowy Fibocom L850/L860/FM350';
 wan['-'] = ' ';
 wan['detect'] = 'Wykryj...';
@@ -1234,6 +1243,15 @@ function showconfig() {
 			e.appendChild(opt);
 		}
 
+		e = removeOptions('wan_device_rndis');
+		var arr = config.wan_ifnames_rndis;
+		for (var idx = 0; idx < arr.length; idx++) {
+			var opt = document.createElement('option');
+			opt.value = arr[idx];
+			opt.innerHTML = arr[idx];
+			e.appendChild(opt);
+		}
+
 		e = removeOptions('wan_device_mm');
 		var arr = config.wan_devices_mm;
 		for (var idx = 0; idx < arr.length; idx++) {
@@ -1277,8 +1295,8 @@ function showconfig() {
 		}
 		setValue('wan_waninlan', config.wan_waninlan);
 		if (config.wan_proto == 'dhcp') {
-			if (config.wan_ifname == config.wan_ifname_hilink) {
-				setValue('wan_proto', 'dhcp_hilink');
+			if (config.wan_ifnames_rndis.includes(config.wan_ifname)) {
+				setValue('wan_proto', 'dhcp_rndis');
 			}
 		}
 		enableWan(getValue('wan_proto'));
@@ -1623,11 +1641,11 @@ function saveconfig() {
 			}
 			use_wanport = false;
 		}
-		if (wan_type == 'dhcp_hilink') {
+		if (wan_type == 'dhcp_rndis') {
 			if (config.devicesection) {
-				cmd.push('uci set network.wan.device=' + config.wan_ifname_hilink);
+				cmd.push('uci set network.wan.device=' + getValue('wan_device_rndis'));
 			} else {
-				cmd.push('uci set network.wan.ifname=' + config.wan_ifname_hilink);
+				cmd.push('uci set network.wan.ifname=' + getValue('wan_device_rndis'));
 			}
 			wan_type = 'dhcp';
 		}

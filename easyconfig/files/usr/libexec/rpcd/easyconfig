@@ -160,7 +160,7 @@ if [ -n "$WAN_NETMASK" ]; then
 	WAN_NETMASK=$(ipcalc.sh ${WAN_IPADDR}/${WAN_NETMASK} | awk -F= '/^NETMASK=/{print $2}')
 fi
 
-[ -n "$WAN_DNS" ] && WAN_DNS='"'$(echo $WAN_DNS | sed 's/ /","/g')'"'
+[ -n "$WAN_DNS" ] && WAN_DNS='"'${WAN_DNS// /\",\"}'"'
 
 F=/tmp/easyconfig_wan_up
 if [ -e $F ]; then
@@ -382,10 +382,10 @@ fi
 [ -z "$WAN_IFNAME_DEFAULT" ] && [ -n "$WAN_PORTS_DEFAULT" ] && WAN_IFNAME_DEFAULT="br-wan"
 [ "x$WAN_PROTO_DEFAULT" != "xdhcp" ] && WAN_IFNAME_DEFAULT=""
 
-WAN_IFNAME_HILINK=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/)
-[ -z "$WAN_IFNAME_HILINK" ] && WAN_IFNAME_HILINK=$(ls -l /sys/class/net/*/device/driver | grep cdc_ether | sed 's!.*/sys/class/net/\(.*\)/device/.*!\1!')
+WAN_IFNAMES_RNDIS=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/ | xargs)
+[ -z "$WAN_IFNAMES_RNDIS" ] && WAN_IFNAMES_RNDIS=$(ls -l /sys/class/net/*/device/driver | grep cdc_ether | sed 's!.*/sys/class/net/\(.*\)/device/.*!\1!' | xargs)
 
-[ "x$WAN_IFNAME_DEFAULT" = "x$WAN_IFNAME_HILINK" ] && WAN_IFNAME_DEFAULT=""
+[ "x$WAN_IFNAME_DEFAULT" = "x$WAN_IFNAMES_RNDIS" ] && WAN_IFNAME_DEFAULT=""
 
 if [ "x$WAN_PROTO" = "xdhcp" ]; then
 	. /lib/functions/network.sh
@@ -438,18 +438,18 @@ LAN_DHCP=$(uci -q get dhcp.lan.ignore)
 [ "x$LAN_DHCP" = "x1" ] && LAN_DHCP_ENABLED="false" || LAN_DHCP_ENABLED="true"
 
 WAN_DASHBOARD_URL=""
-if [ -n "$WAN_IFNAME_HILINK" ]; then
-	if [ -n "$WAN_GATEWAY" ]; then
+if [ -n "$WAN_IFNAMES_RNDIS" ]; then
+	if [ -n "$WAN_GATEWAY" ] && [ -n "$WAN_IFNAME" ] && echo "$WAN_IFNAMES_RNDIS" | grep -q "$WAN_IFNAME"; then
 		# Huawei
-		if grep -q "usb:v12D1p" /sys/class/net/$WAN_IFNAME_HILINK/device/modalias 2>/dev/null; then
+		if grep -q "usb:v12D1p" /sys/class/net/$WAN_IFNAME/device/modalias 2>/dev/null; then
 			WAN_DASHBOARD_URL="http://$WAN_GATEWAY"
 		fi
 		# ZTE
-		if grep -q "usb:v19D2p" /sys/class/net/$WAN_IFNAME_HILINK/device/modalias 2>/dev/null; then
+		if grep -q "usb:v19D2p" /sys/class/net/$WAN_IFNAME/device/modalias 2>/dev/null; then
 			WAN_DASHBOARD_URL="http://$WAN_GATEWAY"
 		fi
 		# TP-Link Archer MR200
-		if grep -q "usb:v2357p000D" /sys/class/net/$WAN_IFNAME_HILINK/device/modalias 2>/dev/null; then
+		if grep -q "usb:v2357p000D" /sys/class/net/$WAN_IFNAME/device/modalias 2>/dev/null; then
 			WAN_DASHBOARD_URL="http://$WAN_GATEWAY/login.html"
 		fi
 	fi
@@ -511,7 +511,8 @@ echo '"wan_device":"'$WAN_DEVICE'",'
 echo '"wan_pincode":"'$WAN_PINCODE'",'
 echo '"wan_ifname":"'$WAN_IFNAME'",'
 echo '"wan_ifname_default":"'$WAN_IFNAME_DEFAULT'",'
-echo '"wan_ifname_hilink":"'$WAN_IFNAME_HILINK'",'
+[ -n "$WAN_IFNAMES_RNDIS" ] && WAN_IFNAMES_RNDIS='"'${WAN_IFNAMES_RNDIS// /\",\"}'"'
+echo '"wan_ifnames_rndis":['$WAN_IFNAMES_RNDIS'],'
 echo '"wan_dashboard_url":"'$WAN_DASHBOARD_URL'",'
 echo '"wan_modem_mode":"'$WAN_MODEM_MODE'",'
 echo '"wan_username":"'$(escapeJSON "$WAN_USERNAME")'",'
@@ -524,7 +525,7 @@ if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	echo ',"dhcp","static"'
 	[ -f /usr/lib/pppd/*/pppoe.so ] && echo ',"pppoe"'
 fi
-[ -n "$WAN_IFNAME_HILINK" ] && echo ',"dhcp_hilink"'
+[ -n "$WAN_IFNAMES_RNDIS" ] && echo ',"dhcp_rndis"'
 T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices 2>/dev/null) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
 if [ -n "$T" ]; then
 	[ -e /lib/netifd/proto/ncm.sh ] && echo ',"ncm"'
@@ -1467,31 +1468,30 @@ pincode()
 detect_wan()
 {
 # Fibocom L850/L860/FM350
-if grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
-	ifdown wan
-	DEVICE=""
-	DEVICES=$(ls /dev/ttyUSB* /dev/ACM* 2>/dev/null)
-	for D in $DEVICES; do
-		O=$(gcom -d $D -s /usr/share/easyconfig/modem/checkext.gcom)
-		if echo "$O" | grep -q "SIM PIN"; then
-			echo '{"proto":"xmm","device":"'$D'","action":"pinrequired"}'
+	if grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
+		ifdown wan
+		DEVICE=""
+		DEVICES=$(ls /dev/ttyUSB* /dev/ACM* 2>/dev/null)
+		for D in $DEVICES; do
+			O=$(gcom -d $D -s /usr/share/easyconfig/modem/checkext.gcom)
+			if echo "$O" | grep -q "SIM PIN"; then
+				echo '{"proto":"xmm","device":"'$D'","action":"pinrequired"}'
+				exit 0
+			fi
+			if echo "$O" | grep -q "+CPIN"; then
+				DEVICE=$D
+				break
+			fi
+		done
+		if [ -n "$DEVICE" ]; then
+			APN=$(echo $O | awk -F, '/^\+CGDCONT: 1/{print $3}' | xargs)
+			echo '{"proto":"xmm","device":"'$DEVICE'","apn":"'${APN:-internet}'"}'
 			exit 0
 		fi
-		if echo "$O" | grep -q "+CPIN"; then
-			DEVICE=$D
-			break
-		fi
-	done
-	if [ -n "$DEVICE" ]; then
-		APN=$(echo $O | awk -F, '/^\+CGDCONT: 1/{print $3}' | xargs)
-		echo '{"proto":"xmm","device":"'$DEVICE'","apn":"'${APN:-internet}'"}'
-		exit 0
 	fi
-fi
 
 # modem usb qmi
-	T=$(grep qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$T" ]; then
+	if grep -q qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null; then
 		F=$(mktemp)
 		DEVICE=""
 		DEVICES=$(ls /dev/cdc-wdm* 2>/dev/null)
@@ -1524,16 +1524,14 @@ fi
 	fi
 
 # modem usb mbim
-	T=$(grep cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$T" ]; then
+	if grep -q cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null; then
 		DEVICE=$(ls /dev/cdc-wdm* | head -n1)
 		echo '{"proto":"mbim","device":"'$DEVICE'","apn":"internet"}'
 		exit 0
 	fi
 
 # modem usb ncm
-	T=$(grep cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null)
-	if [ -n "$T" ]; then
+	if grep -q cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null; then
 		ifdown wan
 		DEVICE=""
 		DEVICES=$(ls /dev/ttyUSB* /dev/cdc-wdm* 2>/dev/null)
@@ -1602,10 +1600,10 @@ fi
 	fi
 
 # modem usb hilink or rndis
-	T=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/)
-	[ -z "$T" ] && T=$(ls -l /sys/class/net/*/device/driver | grep cdc_ether | sed 's!.*/sys/class/net/\(.*\)/device/.*!\1!')
+	T=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/ | head -n1)
+	[ -z "$T" ] && T=$(ls -l /sys/class/net/*/device/driver | grep cdc_ether | sed 's!.*/sys/class/net/\(.*\)/device/.*!\1!' | head -n1)
 	if [ -n "$T" ]; then
-		echo '{"proto":"dhcp_hilink","ifname":"'$T'"}'
+		echo '{"proto":"dhcp_rndis","ifname":"'$T'"}'
 		exit 0
 	fi
 
