@@ -745,7 +745,7 @@ function enableWan(proto) {
 			t = {"":"Wg ustawień modemu","auto":"Wybór automatyczny 4G/3G/2G","lte":"Tylko 4G (LTE)","umts":"Tylko 3G (HSPA/UMTS)","gsm":"Tylko 2G (EDGE/GSM)"};
 		}
 		if (proto == 'qmi') {
-			t = {"":"Wg ustawień modemu","all":"Wybór automatyczny 5G/4G/3G/2G","lte":"Tylko 4G (LTE A/LTE)","umts":"Tylko 3G (HSPA/UMTS)","gsm":"Tylko 2G (EDGE/GSM)"};
+			t = {"":"Wg ustawień modemu", "all":"Wybór automatyczny 5G/4G/3G/2G", "lte":"Tylko 4G (LTE-A/LTE)", "umts":"Tylko 3G (HSPA/UMTS)", "gsm":"Tylko 2G (EDGE/GSM)"};
 		}
 		for (key in t) {
 			var opt = document.createElement('option');
@@ -800,9 +800,12 @@ function enableWan(proto) {
 	setCookie('easyconfig_status_wan', (proto != 'none' ? '1' : '0'));
 	document.getElementById('wan_proto').setAttribute('data-prev', getValue('wan_proto'));
 
-	if (proto == 'dhcp_rndis' && config.wan_ifnames_rndis.includes(config.wan_ifname) && config.wan_dashboard_url) {
-		document.getElementById('wan_dashboard_url').setAttribute('href', config.wan_dashboard_url);
-		setElementEnabled('wan_dashboard_url', true, false);
+	if (proto == 'dhcp_rndis') {
+		setElementEnabled('wan_device_rndis', (config.wan_ifnames_rndis).length > 1, true);
+		if (config.wan_ifnames_rndis.includes(config.wan_ifname) && config.wan_dashboard_url) {
+			document.getElementById('wan_dashboard_url').setAttribute('href', config.wan_dashboard_url);
+			setElementEnabled('wan_dashboard_url', true, false);
+		}
 	}
 
 	if (proto == '3g' || proto == 'mbim' || proto == 'ncm' || proto == 'qmi' || proto == 'xmm') {
@@ -1281,6 +1284,7 @@ function showconfig() {
 		setValue('wan_gateway', config.wan_gateway);
 		setValue('wan_apn', config.wan_apn);
 		setValue('wan_device', config.wan_device);
+		setValue('wan_device_rndis', config.wan_device);
 		setValue('wan_device_mm', config.wan_device);
 		setValue('wan_pincode', config.wan_pincode);
 		setValue('wan_dns1', (config.wan_dns.length > 0 ? config.wan_dns[0] : ''));
