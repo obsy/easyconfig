@@ -1460,7 +1460,7 @@ pincode()
 		PINCODE="$pincode" gcom -d "$device" -s /etc/gcom/setpin.gcom >/dev/null 2>&1
 	fi
 	if [ "x$proto" = "xqmi" ]; then
-		uqmi -d $device --verify-pin1 $pincode >/dev/null 2>&1
+		uqmi -t 1000 -d "$device" --uim-verify-pin1 "$pincode" >/dev/null 2>&1 || uqmi -t 1000 -d "$device" --verify-pin1 "$pincode" >/dev/null 2>&1
 	fi
 	echo '{}'
 }
@@ -1492,34 +1492,26 @@ detect_wan()
 
 # modem usb qmi
 	if grep -q qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null; then
-		F=$(mktemp)
 		DEVICE=""
-		DEVICES=$(ls /dev/cdc-wdm* 2>/dev/null)
+		DEVICES=$(find /dev -name cdc-wdm* | sort)
 		for D in $DEVICES; do
-			echo "" > $F
-			(uqmi -s -d $D --get-pin-status > $F) &
-			sleep 2
-			killall uqmi >/dev/null 2>&1
-			if grep -q '"pin1_status"' $F; then
+			T=$(uqmi -t 1000 -s -d $D --get-pin-status)
+			if echo "$T" | grep -q '"pin1_status"'; then
 				DEVICE=$D
 				break
 			fi
-			if grep -q '"Not supported"\|"Invalid QMI command"' $F; then
+			if echo "$T" | grep -q '"Not supported"\|"Invalid QMI command"'; then
 				DEVICE=$D
 				break
 			fi
 		done
 		if [ -n "$DEVICE" ]; then
-			if grep -q '"pin1_status":"not_verified"' $F; then
-				rm $F >/dev/null 2>&1
+			if echo "$T" | grep -q '"pin1_status":"not_verified"'; then
 				echo '{"proto":"qmi","device":"'$DEVICE'","action":"pinrequired"}'
 				exit 0
 			fi
-			rm $F >/dev/null 2>&1
 			echo '{"proto":"qmi","device":"'$DEVICE'","apn":"internet"}'
 			exit 0
-		else
-			rm $F >/dev/null 2>&1
 		fi
 	fi
 
