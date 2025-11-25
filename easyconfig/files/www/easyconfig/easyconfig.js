@@ -6254,7 +6254,7 @@ function savevpnnew() {
 		setValue('vpn_wireguard_auto', 0);
 		setValue('vpn_wireguard_button', false);
 		setDisplay('div_vpn_wireguard_button', config.button.code != '');
-		setValue('vpn_wiregaurd_zone_input', 'r');
+		setValue('vpn_wireguard_zone_input', 'r');
 		setValue('vpn_wireguard_lanto', true);
 		setValue('vpn_wireguard_privkey', '');
 		setValue('vpn_wireguard_pubkey', '');
@@ -6306,7 +6306,7 @@ function vpn_parse_openvpn() {
 	uploaded_config = '';
 }
 
-function vpn_parse_wiregaurd() {
+function vpn_parse_wireguard() {
 	closevpnnew();
 
 	showError('vpn_wireguard_error', '', '');
@@ -9006,7 +9006,7 @@ function upload_file(file) {
 				var hasPeer = lines.some(line => line.toLowerCase().includes('[peer]'));
 				if (hasInterface && hasPeer) {
 					detectedvpn = 'wireguard';
-					button.onclick = vpn_parse_wiregaurd;
+					button.onclick = vpn_parse_wireguard;
 				}
 			}
 
