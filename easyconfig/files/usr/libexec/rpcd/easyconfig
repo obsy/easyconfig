@@ -411,7 +411,7 @@ if [ "x$WAN_PROTO" = "xstatic" ]; then
 	fi
 fi
 
-[ -n "$WAN_DNS" ] && WAN_DNS='"'$(echo $WAN_DNS | sed 's/ /","/g')'"'
+[ -n "$WAN_DNS" ] && WAN_DNS='"'${WAN_DNS// /\",\"}'"'
 
 if [ -e /etc/init.d/stubby ]; then
 	STUBBY="true"
@@ -472,7 +472,7 @@ if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 		T=$(uci -q get network.lan.device)
 		if [ -n "$T" ]; then
 			SEC=$(uci show network | awk -F. '/\.name='\'''${T}''\''$/{print $2}')
-			if [ -n "$SEC" ]; then
+			if [ -n "$SEC" ] && [ "x$(uci -q get network.$SEC.type)" = "xbridge" ]; then
 				case "$(uci -q get network.$SEC.ports)" in
 					*$WAN_IFNAME_DEFAULT*)
 					WAN_WANINLAN="true"
@@ -916,7 +916,7 @@ client_data() {
 
 show_clients() {
 LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
-NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
+NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''$/{print $2}')
 WIRELESSSTATUS=$(ubus call network.wireless status || echo '{}')
 TPORTS1=""
 echo '{"result":['
@@ -1884,7 +1884,7 @@ show_vpn()
 				[ -z "$NAME" ] && NAME=$(uci -q get network.$INTERFACE.server)
 				;;
 			"wireguard")
-				PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$INTERFACE'/{print $2}')
+				PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$INTERFACE'$/{print $2}')
 				NAME=""
 				for PEER in $PEERS; do
 					T1=$(uci -q get network.$PEER.description)
@@ -1949,7 +1949,7 @@ show_vpn_status()
 	if [ "x$PROTO" = "xwireguard" ]; then
 		echo ',"peers":['
 		T=$(wg show $interface dump 2>/dev/null)
-		PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$interface'/{print $2}')
+		PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$interface'$/{print $2}')
 		for PEER in $PEERS; do
 			PUBKEY=$(uci -q get network.$PEER.public_key)
 			T1=$(echo "$T" | awk '/^'$(escapeForSed $PUBKEY)'/{print $5}')
@@ -2085,7 +2085,7 @@ show_vpn_details()
 			fi
 		done
 		PORT=$(uci -q get network.$interface.listen_port)
-		PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$interface'/{print $2}')
+		PEERS=$(uci show network | awk -F[.=] '/=wireguard_'$interface'$/{print $2}')
 		echo "\"privkey\":\"$PRIVKEY\",\"pubkey\":\"$PUBKEY\",\"listen_port\":\"$PORT\",\"ips\":[$IPS],\"peers\":["
 		for PEER in $PEERS; do
 			DISABLED=$(uci -q get network.$PEER.disabled)
@@ -2365,7 +2365,7 @@ show_networks() {
 	echo '{'
 
 	LANDEVICE=$(uci get network.lan.device)
-	LANBRIDGE=$(uci show network | awk -F. '/\.name='\'''$LANDEVICE''\''/{print $2}')
+	LANBRIDGE=$(uci show network | awk -F. '/\.name='\'''$LANDEVICE''\''$/{print $2}')
 
 	T=$(jsonfilter -i /etc/board.json -e '@.network.lan.ports' | jsonfilter -q -e '@.*')
 	[ -z "$T" ] && T=$(jsonfilter -i /etc/board.json -e '@.network.lan.device')
@@ -2375,10 +2375,10 @@ show_networks() {
 			NETWORK=""
 			DESCRIPTION=""
 			BRIDGE=$(uci show network | awk -F. '/'\'''$PORT''\''/{print $2}')
-			if [ -n "$BRIDGE" ]; then
+			if [ -n "$BRIDGE" ] && [ "x$(uci -q get network.$BRIDGE.type)" = "xbridge" ]; then
 				DEVICE=$(uci -q get network.$BRIDGE.name)
 				if [ -n "$DEVICE" ]; then
-					NETWORK=$(uci show network | awk -F. '/\.device='\'''$DEVICE''\''/{print $2}')
+					NETWORK=$(uci show network | awk -F. '/\.device='\'''$DEVICE''\''$/{print $2}')
 					[ -n "$NETWORK" ] && DESCRIPTION=$(escapeJSON "$(uci -q get network.$NETWORK.description)")
 				fi
 			fi
@@ -2390,7 +2390,7 @@ show_networks() {
 	jsonfilter -q -i /etc/board_ports.json -e '@' || echo '[]'
 	echo ','
 	echo '"networks":['
-	NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
+	NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''$/{print $2}')
 	for SEC in $NETWORKS; do
 		[ "$SEC" = "lan" ] && continue
 		[ "$SEC" = "loopback" ] && continue
@@ -2476,11 +2476,11 @@ show_networks() {
 		echo '],'
 		echo '"button":'$BUTTON','
 		BRIDGE=$(ubus call network.interface.$SEC status | jsonfilter -e @.l3_device)
-		T=$(uci show network | awk -F. '/\.name='\'''$BRIDGE''\''/{print $2}')
+		T=$(uci show network | awk -F. '/\.name='\'''$BRIDGE''\''$/{print $2}')
 		TPORTS=""
-		if [ -n "$T" ]; then
+		if [ -n "$T" ] && [ "x$(uci -q get network.$T.type)" = "xbridge" ]; then
 			TPORTS=$(uci -q get network.$T.ports)
-			[ -n "$TPORTS" ] && TPORTS='"'$(echo $TPORTS | sed 's/ /","/g')'"'
+			[ -n "$TPORTS" ] && TPORTS='"'${TPORTS// /\",\"}'"'
 		fi
 		echo '"wire":['${TPORTS}'],'
 		WLAN_CLIENTS=0
