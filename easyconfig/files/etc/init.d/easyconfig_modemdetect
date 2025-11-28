@@ -1,7 +1,6 @@
 #!/bin/sh /etc/rc.common
 
 START=91
-STOP=91
 
 start() {
 	[ -e /sys/kernel/debug/usb/devices ] || exit 0

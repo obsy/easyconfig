@@ -8979,7 +8979,7 @@ function upload_file(file) {
 	var isTextExt = /\.(txt|conf|ovpn)$/i.test(file.name);
 
 	if (!isTextType && !isTextExt) {
-		setValue('upload_status', 'Plik nie jest plikiem tekstowym');
+		setValue('upload_status', 'Plik nieznanego typu');
 	}
 
 	var reader = new FileReader();
