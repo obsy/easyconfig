@@ -8002,13 +8002,7 @@ function networkdetails(data) {
 	setValue('network_ipaddr', json.ipaddr);
 	setValue('network_netmask', json.netmask);
 	setValue('network_dhcp', json.dhcp);
-	setValue('network_towan', false);
-	(json.forwarding).forEach(function(f) {
-		if (f.hasOwnProperty('wan')) {
-			setValue('network_towan', true);
-		}
-	});
-
+	setValue('network_towan', json.forwarding != '');
 	setValue('div_network_interfaces_content', '');
 
 	var revision = getRevision();
@@ -8107,14 +8101,8 @@ function okremovenetwork() {
 	}
 	cmd.push('uci -q del firewall.' + json.section + '_dhcp');
 	cmd.push('uci -q del firewall.' + json.section + '_dns');
-	var t = '';
-	(json.forwarding).forEach(function(f) {
-		if (f.hasOwnProperty('wan')) {
-			t = f['wan'];
-		}
-	});
-	if (t != '') {
-		cmd.push('uci -q del firewall.' + t);
+	if (json.forwarding) {
+		cmd.push('uci -q del firewall.' + json.forwarding);
 	}
 	for (var i = 0; i < json.wireless.length; i++) {
 		for (var key in json.wireless[i]) {
@@ -8224,23 +8212,13 @@ function savenetwork() {
 	cmd.push('uci set firewall.' + json.section + '_dns.family=ipv4');
 	cmd.push('uci set firewall.' + json.section + '_dns.proto=\\\"tcp udp\\\"');
 
-	var t = '';
-	(json.forwarding).forEach(function(f) {
-		if (f.hasOwnProperty('wan')) {
-			t = f['wan'];
-		}
-	});
+	if (json.forwarding) {
+		cmd.push('uci -q del firewall.' + json.forwarding);
+	}
 	if (getValue('network_towan')) {
-		if (t == '') {
-			cmd.push('uci add firewall forwarding');
-			t = '@forwarding[-1]';
-		}
-		cmd.push('uci set firewall.' + t + '.src=' + json.section);
-		cmd.push('uci set firewall.' + t + '.dest=wan');
-	} else {
-		if (t != '') {
-			cmd.push('uci -q del firewall.' + t);
-		}
+		cmd.push('uci add firewall forwarding');
+		cmd.push('uci set firewall.@forwarding[-1].src=' + json.section);
+		cmd.push('uci set firewall.@forwarding[-1].dest=wan');
 	}
 
 	// wlan

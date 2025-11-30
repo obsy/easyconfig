@@ -32,6 +32,25 @@ escapeForSed() {
 	echo "$ret"
 }
 
+findsection() {
+	local SECS=$(uci show ${1} | awk -F[.=] '/='${2}'$/{print $2}')
+	for SEC in $SECS; do
+		local p1=$(uci -q get ${1}.${SEC}.${3})
+		if [ -z "${5}" ]; then
+			if [ "x${p1}" = "x${4}" ]; then
+				echo ${SEC}
+				break
+			fi
+		else
+			local p2=$(uci -q get ${1}.${SEC}.${5})
+			if [ "x${p1}" = "x${4}" ] && [ "x${p2}" = "x${6}" ]; then
+				echo ${SEC}
+				break
+			fi
+		fi
+	done
+}
+
 simslot() {
 	echo ',"simslot":{'
 	case $(cat /tmp/sysinfo/board_name) in
@@ -469,16 +488,13 @@ fi
 WAN_WANINLAN="false"
 if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	if $DEVICESECTION; then
-		T=$(uci -q get network.lan.device)
-		if [ -n "$T" ]; then
-			SEC=$(uci show network | awk -F. '/\.name='\'''${T}''\''$/{print $2}')
-			if [ -n "$SEC" ] && [ "x$(uci -q get network.$SEC.type)" = "xbridge" ]; then
+		SEC=$(findsection network device name $(uci -q get network.lan.device) type bridge)
+		if [ -n "$SEC" ]; then
 				case "$(uci -q get network.$SEC.ports)" in
-					*$WAN_IFNAME_DEFAULT*)
-					WAN_WANINLAN="true"
-					;;
-				esac
-			fi
+				*$WAN_IFNAME_DEFAULT*)
+				WAN_WANINLAN="true"
+				;;
+			esac
 		fi
 	else
 		case "$(uci -q get network.lan.ifname)" in
@@ -665,19 +681,7 @@ T=$(uci -q get dhcp.@dnsmasq[0].logqueries)
 [ "x$T" = "x1" ] && T="true" || T="false"
 echo '"dhcp_logqueries":'$T','
 
-T=""
-RULES=$(uci show firewall | awk -F. '/\.src='\''lan'\''$/{print $2}')
-for RULE in $RULES; do
-	T2=$(uci -q get firewall.${RULE}.dest)
-	if [ "x$T2" = "xwan" ]; then
-		T2=$(uci -q get firewall.$RULE)
-		if [ "x$T2" = "xforwarding" ]; then
-			T="$RULE"
-			break
-		fi
-	fi
-done
-echo '"wan_lanto":"'$T'",'
+echo '"wan_lanto":"'$(findsection firewall forwarding src lan dest wan)'",'
 
 T=$(uci -q get easyconfig.global.datarec_period)
 echo '"datarec_period":'${T:-15}','
@@ -824,11 +828,7 @@ else
 fi
 
 FLOWOFFLOADING="false"
-T=$(uci show firewall | awk -F[.=] '/=defaults$/{print $2}')
-if [ -n "$T" ]; then
-	T1=$(uci -q get firewall.@defaults[0].flow_offloading)
-	[ "x$T1" = "x1" ] && FLOWOFFLOADING="true"
-fi
+[ -n "$(findsection firewall defaults flow_offloading 1)" ] && FLOWOFFLOADING="true"
 echo '"flowoffloading":'$FLOWOFFLOADING','
 
 if [ -e /www/cgi-bin/luci ]; then
@@ -1820,7 +1820,7 @@ show_vpn()
 			TUN=$(uci -q get openvpn.$OVPN.dev)
 			NAME=$(uci -q get openvpn.$OVPN.name)
 			[ -z "$TUN" ] && TUN=$(awk '/^tun/{print $2}' $(uci -q get openvpn.$OVPN.config) 2>/dev/null)
-			[ -n "$TUN" ] && INTERFACE=$(uci show network | awk -F. '/device='\'''${TUN}''\''$/{print $2}')
+			[ -n "$TUN" ] && INTERFACE=$(findsection network interface device $TUN proto none)
 			if [ -n "$INTERFACE" ]; then
 				INTERFACES="${INTERFACES} ${INTERFACE}:openvpn:${OVPN}"
 			else
@@ -1844,7 +1844,7 @@ show_vpn()
 			ID=$(uci get zerotier.$ZT.id)
 			DEVICE=$(jsonfilter -s "$LN" -q -e '@[@.id="'$ID'"].portDeviceName')
 			[ -z "$DEVICE" ] && DEVICE=$(awk -F[=] '/^'$ID'=zt/{print $2}' /etc/zerotier/devicemap 2>/dev/null)
-			[ -n "$DEVICE" ] && INTERFACE=$(uci show network | awk -F. '/device='\'''${DEVICE}''\''$/{print $2}')
+			[ -n "$DEVICE" ] && INTERFACE=$(findsection network interface device $DEVICE proto none)
 			if [ -n "$INTERFACE" ]; then
 				INTERFACES="${INTERFACES} ${INTERFACE}:zerotier:${ZT}"
 			else
@@ -1902,19 +1902,7 @@ show_vpn()
 	done
 	echo "]"
 
-	T=""
-	RULES=$(uci show firewall | awk -F. '/\.src='\''lan'\''$/{print $2}')
-	for RULE in $RULES; do
-		T2=$(uci -q get firewall.${RULE}.dest)
-		if [ "x$T2" = "xwan" ]; then
-			T2=$(uci -q get firewall.$RULE)
-			if [ "x$T2" = "xforwarding" ]; then
-				T="$RULE"
-				break
-			fi
-		fi
-	done
-	echo ',"wan_lanto":"'$T'"}'
+	echo ',"wan_lanto":"'$(findsection firewall forwarding src lan dest wan)'"}'
 }
 
 show_vpn_status()
@@ -2364,8 +2352,7 @@ wolwakeup() {
 show_networks() {
 	echo '{'
 
-	LANDEVICE=$(uci get network.lan.device)
-	LANBRIDGE=$(uci show network | awk -F. '/\.name='\'''$LANDEVICE''\''$/{print $2}')
+	LANBRIDGE=$(findsection network device name $(uci get network.lan.device) type bridge)
 
 	T=$(jsonfilter -i /etc/board.json -e '@.network.lan.ports' | jsonfilter -q -e '@.*')
 	[ -z "$T" ] && T=$(jsonfilter -i /etc/board.json -e '@.network.lan.device')
@@ -2378,7 +2365,7 @@ show_networks() {
 			if [ -n "$BRIDGE" ] && [ "x$(uci -q get network.$BRIDGE.type)" = "xbridge" ]; then
 				DEVICE=$(uci -q get network.$BRIDGE.name)
 				if [ -n "$DEVICE" ]; then
-					NETWORK=$(uci show network | awk -F. '/\.device='\'''$DEVICE''\''$/{print $2}')
+					NETWORK=$(findsection network interface device $DEVICE proto static)
 					[ -n "$NETWORK" ] && DESCRIPTION=$(escapeJSON "$(uci -q get network.$NETWORK.description)")
 				fi
 			fi
@@ -2410,20 +2397,10 @@ show_networks() {
 		fi
 		T=$(uci -q get network.$SEC.device)
 		echo '"device":"'$T'",'
-		BRIDGE=""
-		T1=$(uci show network | awk -F. '/\.name='\'''$T''\''$/{print $2}')
-		[ -n "$T1" ] && [ "x$(uci -q get network.$T1.type)" = "xbridge" ] && BRIDGE=$T1
+		BRIDGE=$(findsection network device name $T type bridge)
 		echo '"bridge":"'$BRIDGE'",'
-		T=$(uci show firewall | awk -F. '/\.network='\'''$SEC''\''$/{print $2}')
-		echo '"zone":"'$T'",'
-		echo '"forwarding":['
-		RULES=$(uci show firewall | awk -F. '/\.src='\'''$SEC''\''$/{print $2}')
-		for RULE in $RULES; do
-			if [ "x$(uci -q get firewall.${RULE})" = "xforwarding" ]; then
-				echo '{"'$(uci -q get firewall.${RULE}.dest)'":"'${RULE}'"},'
-			fi
-		done
-		echo '],'
+		echo '"zone":"'$(uci show firewall | awk -F. '/\.network='\'''$SEC''\''$/{print $2}')'",'
+		echo '"forwarding":"'$(findsection firewall forwarding src $SEC dest wan)'"',
 		DHCP="1"
 		T=$(uci -q get dhcp.$SEC.ignore)
 		[ "x$T" = "x1" ] && DHCP=0
@@ -2476,9 +2453,9 @@ show_networks() {
 		echo '],'
 		echo '"button":'$BUTTON','
 		BRIDGE=$(ubus call network.interface.$SEC status | jsonfilter -e @.l3_device)
-		T=$(uci show network | awk -F. '/\.name='\'''$BRIDGE''\''$/{print $2}')
 		TPORTS=""
-		if [ -n "$T" ] && [ "x$(uci -q get network.$T.type)" = "xbridge" ]; then
+		T=$(findsection network device name $BRIDGE type bridge)
+		if [ -n "$T" ]; then
 			TPORTS=$(uci -q get network.$T.ports)
 			[ -n "$TPORTS" ] && TPORTS='"'${TPORTS// /\",\"}'"'
 		fi
