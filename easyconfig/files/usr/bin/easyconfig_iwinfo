@@ -1,0 +1,60 @@
+#!/usr/bin/ucode
+
+'use strict';
+
+import { find_phy } from 'wifi.utils';
+import * as uci from 'uci';
+import { readfile, stat } from "fs";
+
+let board_data = json(readfile('/etc/board.json'));
+
+function hwmodelist(name) {
+	const mode = { 'HT*': 'n', 'VHT*': 'ac', 'HE*': 'ax' };
+	let band = '';
+	let phy = board_data.wlan?.[name];
+	if (!phy)
+		return '';
+	let list = [];
+	for (let k, v in phy.info.bands) {
+		band = k;
+		let htmodes = phy.info.bands[band]?.modes;
+		if (band == '2G' && 'NOHT' in htmodes)
+			push(list, 'g/b');
+		for (let k, v in mode)
+			for (let htmode in htmodes)
+				if (wildcard(htmode, k))
+					push(list, v);
+	}
+	if (length(list) == 0)
+		return '';
+
+	return '802.11' + join('/', reverse(uniq(list))) + '\n';
+}
+
+if (ARGV[0] == 'nl80211' && ARGV[1] == 'phyname') {
+	let sec_name = ARGV[2];
+	let sec = uci.cursor(null, null, null, { strict: false }).get_all('wireless', sec_name);
+	if (!sec || sec['.type'] != 'wifi-device') {
+		warn(`Config section ${sec_name} not found\n`);
+		return 1;
+	}
+
+	let name = find_phy(sec);
+	if (!name) {
+		warn('Phy not found\n');
+		return 1;
+	}
+
+	print(name + '\n');
+	return 0;
+}
+
+if (length(ARGV) == 2 && ARGV[1] == 'hwmode') {
+	print(hwmodelist(ARGV[0]));
+	return 0;
+}
+
+warn('Usage:\n' +
+	'\teasyconfig_iwinfo <device> hwmode\n' +
+	'\teasyconfig_iwinfo nl80211 phyname <section>\n');
+return 1;

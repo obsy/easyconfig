@@ -653,11 +653,15 @@ for R in $RADIOS; do
 	echo '"wlan_hidden":'${WLAN_HIDDEN:-0}','
 	echo '"wlan_macaddr":"'$WLAN_MACADDR'",'
 	echo '"wlan_section":"'$WLAN_SEC'",'
-	O=$(iwinfo $R info 2>/dev/null)
-	HWMODE=$(echo "$O" | awk -F: '/HW Mode/{gsub(" ","",$3);print $3}')
-	echo '"wlan_hwmode":"'$HWMODE'",'
-	PHY=$(echo "$O" | awk -F: '/PHY name:/{gsub(" ","",$3);print $3}')
+	PHY=$(iwinfo nl80211 phyname $R)
 	echo '"wlan_phy":"'$PHY'",'
+	if grep -q ucode /usr/bin/iwinfo; then
+		HWMODE=$(easyconfig_iwinfo $PHY hwmode)
+		echo '"wlan_hwmode":"'$HWMODE'",'
+	else
+		HWMODE=$(iwinfo $R info 2>/dev/null | awk -F: '/HW Mode/{gsub(" ","",$3);print $3}')
+		echo '"wlan_hwmode":"'$HWMODE'",'
+	fi
 	echo '"wlan_channels":{'
 	O=""
 	[ -n "$PHY" ] && O=$(iw phy $PHY info | grep -v "(disabled)" | grep -v "(no IR)" | awk '/\* [0-9\.]+ MHz/{dfs="false";if(index($0, "radar detection") != 0){dfs="true"};gsub(/\[|\]|\(|\)/,""); printf ",\"%d\":[\"%s\",\"%s\",%s]", $4, $2, $5, dfs}')
