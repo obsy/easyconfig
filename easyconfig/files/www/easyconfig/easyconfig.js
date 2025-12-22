@@ -5672,7 +5672,7 @@ function readsms() {
 		for (var idx = 0, n = arr.length; idx < n; idx++) {
 			arr[idx].joined = [];
 			arr[idx].joined.push(arr[idx].index);
-			if (data.join && arr[idx].part && arr[idx].reference) {
+			if (data.join && arr[idx].part && 'reference' in arr[idx]) {
 				if (arr[idx].part == 1) {
 					for (var part = 2; part <= arr[idx].total; part++) {
 						var obj = arr.find(o => o.part == part && o.reference == arr[idx].reference);
