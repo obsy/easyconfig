@@ -9,7 +9,7 @@ import { readfile, stat } from "fs";
 let board_data = json(readfile('/etc/board.json'));
 
 function hwmodelist(name) {
-	const mode = { 'HT*': 'n', 'VHT*': 'ac', 'HE*': 'ax' };
+	const mode = { 'HT*': 'n', 'VHT*': 'ac', 'HE*': 'ax', 'EHT*': 'be' };
 	let band = '';
 	let phy = board_data.wlan?.[name];
 	if (!phy)
