@@ -1365,7 +1365,7 @@ show_sms() {
 			T=$(uci -q get easyconfig.sms.storage)
 			[ -n "$T" ] && STORAGE="-s $T"
 			O=$(sms_tool -d $DEVICE $STORAGE -j -f "%Y%m%d%H%M%S" recv 2>/dev/null)
-			[ -n "$O" ] && echo "$O" | sed 's/"msg"/"join":'${JOIN:-1}',"msg"/' || echo '{"join":1,"msg":[]}'
+			[ -n "$O" ] && echo "$O" | sed 's/"msg"/"join":'${JOIN:-1}',"msg"/;s/\\u0000//g' || echo '{"join":1,"msg":[]}'
 			;;
 	esac
 }
