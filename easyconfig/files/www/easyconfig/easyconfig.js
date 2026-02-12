@@ -718,8 +718,11 @@ function enableWan(proto) {
 	}
 
 	var fields = [];
+	if (proto == 'dhcp') {
+		fields = ['wan_macaddr'];
+	}
 	if (proto == 'static') {
-		fields = ['wan_ipaddr', 'wan_gateway', 'wan_dns1', 'wan_dns2'];
+		fields = ['wan_ipaddr', 'wan_gateway', 'wan_macaddr', 'wan_dns1', 'wan_dns2'];
 	}
 	if (proto == 'dhcp_rndis') {
 		fields = ['wan_device_rndis'];
@@ -768,7 +771,7 @@ function enableWan(proto) {
 		setValue('wan_lanto_interface2', tmp);
 	}
 
-	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_rndis', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
+	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_macaddr', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_rndis', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
 	for (var idx = 0; idx < all.length; idx++) {
 		setElementEnabled(all[idx], false, false);
 	}
@@ -1282,6 +1285,7 @@ function showconfig() {
 		setValue('wan_ipaddr', config.wan_ipaddr);
 		setValue('wan_netmask', config.wan_netmask);
 		setValue('wan_gateway', config.wan_gateway);
+		setValue('wan_macaddr', config.wan_macaddr.macaddr);
 		setValue('wan_apn', config.wan_apn);
 		setValue('wan_device', config.wan_device);
 		setValue('wan_device_rndis', config.wan_device);
@@ -1655,6 +1659,32 @@ function saveconfig() {
 		}
 		cmd.push('uci set network.wan.proto=' + wan_type);
 		config.wan_proto = wan_type;
+
+		if (wan_type == 'static' || wan_type == 'dhcp') {
+			if (checkFieldAllowEmpty('wan_macaddr', validateMAC)) { return; }
+			var wan_macaddr_section = config.wan_macaddr.section;
+			if (getValue('wan_macaddr') == '') {
+				if (config.wan_macaddr.orig !=  '') {
+					if (wan_macaddr_section == '') {
+						cmd.push('uci add network device');
+						wan_macaddr_section = '@device[-1]';
+						cmd.push('uci set network.' + wan_macaddr_section + '.name=' + config.wan_ifname_default);
+					}
+					cmd.push('uci set network.' + wan_macaddr_section + '.macaddr=\\\"' + config.wan_macaddr.orig + '\\\"');
+				} else {
+					if (config.wan_macaddr.section != '') {
+						cmd.push('uci -q del network.' + wan_macaddr_section + '.macaddr');
+					}
+				}
+			} else {
+				if (wan_macaddr_section == '') {
+					cmd.push('uci add network device');
+					wan_macaddr_section = '@device[-1]';
+					cmd.push('uci set network.' + wan_macaddr_section + '.name=' + config.wan_ifname_default);
+				}
+				cmd.push('uci set network.' + wan_macaddr_section + '.macaddr=\\\"' + getValue('wan_macaddr') + '\\\"');
+			}
+		}
 
 		if (config.wan_ifname_default !== '') {
 			if (config.devicesection) {

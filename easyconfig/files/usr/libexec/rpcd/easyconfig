@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #
-# (c) 2016-2025 Cezary Jackiewicz <cezary@eko.one.pl>
+# (c) 2016-2026 Cezary Jackiewicz <cezary@eko.one.pl>
 #
 
 . /usr/share/libubox/jshn.sh
@@ -401,6 +401,13 @@ fi
 [ -z "$WAN_IFNAME_DEFAULT" ] && [ -n "$WAN_PORTS_DEFAULT" ] && WAN_IFNAME_DEFAULT="br-wan"
 [ "x$WAN_PROTO_DEFAULT" != "xdhcp" ] && WAN_IFNAME_DEFAULT=""
 
+if [ -n "$WAN_IFNAME_DEFAULT" ]; then
+	WAN_MACADDR_SEC=$(findsection network device name $WAN_IFNAME_DEFAULT)
+	[ -n "$WAN_MACADDR_SEC" ] && WAN_MACADDR=$(uci -q get network.$WAN_MACADDR_SEC.macaddr | tr 'A-F' 'a-f')
+	WAN_MACADDR_ORIG=$(jsonfilter -i /etc/board.json -q -e '@.network.wan.macaddr' | tr 'A-F' 'a-f')
+	[ "x$WAN_MACADDR_ORIG" = "x$WAN_MACADDR" ] && WAN_MACADDR=""
+fi
+
 WAN_IFNAMES_RNDIS=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/ | xargs)
 [ -z "$WAN_IFNAMES_RNDIS" ] && WAN_IFNAMES_RNDIS=$(ls -l /sys/class/net/*/device/driver | grep cdc_ether | sed 's!.*/sys/class/net/\(.*\)/device/.*!\1!' | xargs)
 
@@ -527,6 +534,7 @@ echo '"wan_device":"'$WAN_DEVICE'",'
 echo '"wan_pincode":"'$WAN_PINCODE'",'
 echo '"wan_ifname":"'$WAN_IFNAME'",'
 echo '"wan_ifname_default":"'$WAN_IFNAME_DEFAULT'",'
+echo '"wan_macaddr":{"macaddr":"'$WAN_MACADDR'","orig": "'$WAN_MACADDR_ORIG'", "section":"'$WAN_MACADDR_SEC'"},'
 [ -n "$WAN_IFNAMES_RNDIS" ] && WAN_IFNAMES_RNDIS='"'${WAN_IFNAMES_RNDIS// /\",\"}'"'
 echo '"wan_ifnames_rndis":['$WAN_IFNAMES_RNDIS'],'
 echo '"wan_dashboard_url":"'$WAN_DASHBOARD_URL'",'
