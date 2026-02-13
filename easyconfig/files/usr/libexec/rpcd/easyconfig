@@ -1051,7 +1051,7 @@ END { for (T in EVENT) {
 	}
 }')
 
-MACS=$(uci show easyconfig | awk -F[=m] '/=mac/{print $2}')
+MACS=$(uci show easyconfig | awk -F[=m] '/=mac$/{print $2}')
 for MAC in $MACS; do
 	NAME=$(uci -q get easyconfig.m${MAC}.name)
 	if [ -n "$NAME" ]; then
@@ -1334,7 +1334,7 @@ show_ussd() {
 
 show_ussdshortcuts() {
 	echo '{"shortcuts":['
-	T=$(uci show easyconfig | awk -F[=.] '/=ussd/{print $2}')
+	T=$(uci show easyconfig | awk -F[=.] '/=ussd$/{print $2}')
 	for i in $T; do
 		echo '{"'$(uci -q get easyconfig.$i.code)'":"'$(uci -q get easyconfig.$i.description)'"},'
 	done
@@ -2321,7 +2321,7 @@ leds() {
 
 show_wol() {
 	echo '{"result":['
-	T=$(uci show easyconfig | awk -F[=.] '/=wol/{print $2}')
+	T=$(uci show easyconfig | awk -F[=.] '/=wol$/{print $2}')
 	for i in $T; do
 		echo '{'
 		echo '"section":"'${i}'",'
@@ -2340,7 +2340,7 @@ wolwakeup() {
 	json_get_vars section
 	if [ -n "$section" ]; then
 		if [ "$section" = "all" ]; then
-			T=$(uci show easyconfig | awk -F[=.] '/=wol/{print $2}')
+			T=$(uci show easyconfig | awk -F[=.] '/=wol$/{print $2}')
 		else
 			T="$section"
 		fi

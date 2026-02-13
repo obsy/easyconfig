@@ -6920,7 +6920,7 @@ function okremovewireguard() {
 	var interface = getValue('dialog_val');
 	cmd.push('ifdown ' + interface);
 	cmd.push('uci -q del network.' + interface);
-	cmd.push('T=$(uci show network | awk -F [=.] \'/=wireguard_' + interface + '/{print $2}\' | sort -r)');
+	cmd.push('T=$(uci show network | awk -F [=.] \'/=wireguard_' + interface + '$/{print $2}\' | sort -r)');
 	cmd.push('for i in $T; do uci -q del network.$i; done');
 	cmd.push('uci -q del firewall.' + interface);
 	cmd.push('uci -q del firewall.f1' + interface);
@@ -7051,7 +7051,7 @@ function savewireguard() {
 		}
 	}
 
-	cmd.push('T=$(uci show network | awk -F [=.] \'/=wireguard_' + interface + '/{print $2}\' | sort -r)');
+	cmd.push('T=$(uci show network | awk -F [=.] \'/=wireguard_' + interface + '$/{print $2}\' | sort -r)');
 	cmd.push('for i in $T; do uci -q del network.$i; done');
 
 	cnt = getValue('vpn_wireguard_peers');
@@ -8016,7 +8016,7 @@ function networkswifitoggle(section) {
 	var cmd = [];
 	cmd.push('SECTIONS=$(uci -q show wireless | awk -F. \'/\\\\\.network=\'\\\\\'\'\'' + section + '\'\'\\\\\'\'$/{print $2}\')');
 	cmd.push('for SEC in $SECTIONS; do');
-    cmd.push(' T1=1');
+	cmd.push(' T1=1');
 	cmd.push(' T2=$(uci -q get wireless.${SEC}.disabled)');
 	cmd.push(' [ \\\"x$T2\\\" = \\\"x1\\\" ] && T1=0');
 	cmd.push(' uci set wireless.${SEC}.disabled=$T1');

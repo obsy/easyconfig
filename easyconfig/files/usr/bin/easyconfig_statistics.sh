@@ -27,7 +27,7 @@ if [ ! -e $DB ]; then
 fi
 
 LEASEFILE=$(uci -q get dhcp.@dnsmasq[0].leasefile || echo "/tmp/dhcp.leases")
-NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''/{print $2}')
+NETWORKS=$(uci show network | awk -F. '/\.proto='\''static'\''$/{print $2}')
 for SEC in $NETWORKS; do
 	[ "$SEC" = "loopback" ] && continue
 	[ "$SEC" = "wan" ] && continue
