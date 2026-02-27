@@ -368,6 +368,9 @@ function checkFieldAllowEmpty(element, proofFunction) {
 			return true;
 		}
 	}
+	var e = document.getElementById(element);
+	e.style.color = null;
+	removeClasses(e.closest('div'), [ 'has-error' ]);
 	return false;
 }
 
