@@ -255,6 +255,9 @@ case "$BOARDNAME" in
 			echo '{"Ładowanie baterii":"'${CHARGING}'"},{"Temperatura baterii":"'${TEMPERATURE}' &deg;C"},{"Ilość cykli ładowania":"'${CYCLES}'"}'
 		fi
 		;;
+	"raspberrypi"*)
+		vcgencmd measure_temp | awk -F[=\'] '{printf "{\"Temperatura CPU\":\"%s &deg;C\"}", $2}'
+		;;
 	"ravpower,wd03"|\
 	"ravpower,rp-wd03")
 		if [ -e /usr/bin/ravpower-mcu ]; then
