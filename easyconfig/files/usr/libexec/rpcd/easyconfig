@@ -495,12 +495,12 @@ if [ "x$WAN_PROTO" = "xqmi" ]; then
 	WAN_MODEM_MODE=$(uci -q get network.wan.modes)
 fi
 
+LAN_BRIDGE_SECTION=$(findsection network device name $(uci -q get network.lan.device) type bridge)
 WAN_WANINLAN="false"
 if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	if $DEVICESECTION; then
-		SEC=$(findsection network device name $(uci -q get network.lan.device) type bridge)
-		if [ -n "$SEC" ]; then
-				case "$(uci -q get network.$SEC.ports)" in
+		if [ -n "$LAN_BRIDGE_SECTION" ]; then
+			case "$(uci -q get network.$LAN_BRIDGE_SECTION.ports)" in
 				*$WAN_IFNAME_DEFAULT*)
 				WAN_WANINLAN="true"
 				;;
@@ -611,6 +611,7 @@ fi
 echo '"lan_ipaddr":"'$LAN_IPADDR'",'
 echo '"lan_netmask":"'$LAN_NETMASK'",'
 echo '"lan_dhcp_enabled":'$LAN_DHCP_ENABLED','
+echo '"lan_bridge_section":"'$LAN_BRIDGE_SECTION'",'
 
 wlancurrentchannels
 
@@ -2366,9 +2367,6 @@ wolwakeup() {
 
 show_networks() {
 	echo '{'
-
-	LANBRIDGE=$(findsection network device name $(uci get network.lan.device) type bridge)
-
 	T=$(jsonfilter -i /etc/board.json -e '@.network.lan.ports' | jsonfilter -q -e '@.*')
 	[ -z "$T" ] && T=$(jsonfilter -i /etc/board.json -e '@.network.lan.device')
 	echo '"ports":['
@@ -2384,7 +2382,7 @@ show_networks() {
 					[ -n "$NETWORK" ] && DESCRIPTION=$(escapeJSON "$(uci -q get network.$NETWORK.description)")
 				fi
 			fi
-			echo '{"port":"'$PORT'","network":"'$NETWORK'","bridge":"'$BRIDGE'","description":"'$DESCRIPTION'","lanbridge":"'$LANBRIDGE'"},'
+			echo '{"port":"'$PORT'","network":"'$NETWORK'","bridge":"'$BRIDGE'","description":"'$DESCRIPTION'"},'
 		done
 	fi
 	echo '],'

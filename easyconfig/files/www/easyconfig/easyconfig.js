@@ -1691,11 +1691,11 @@ function saveconfig() {
 
 		if (config.wan_ifname_default !== '') {
 			if (config.devicesection) {
-				cmd.push('T=$(uci -q get network.lan.device)');
-				cmd.push('SEC=$(uci show network | awk -F. \'/\\\\\.name=\'\\\\\'\'\'$T\'\'\\\\\'\'$/{print $2}\')');
-				cmd.push('uci -q del_list network.$SEC.ports=' + config.wan_ifname_default);
-				if (use_wanport && getValue('wan_waninlan')) {
-					cmd.push('uci add_list network.$SEC.ports=' + config.wan_ifname_default);
+				if (config.lan_bridge_section) {
+					cmd.push('uci -q del_list network.' + config.lan_bridge_section + '.ports=' + config.wan_ifname_default);
+					if (use_wanport && getValue('wan_waninlan')) {
+						cmd.push('uci add_list network.' + config.lan_bridge_section + '.ports=' + config.wan_ifname_default);
+					}
 				}
 			} else {
 				cmd.push('T=$(uci -q get network.lan.ifname | sed \'s|' + config.wan_ifname_default + '||\' | xargs)');
@@ -8126,9 +8126,9 @@ function okremovenetwork() {
 	}
 	if (json.bridge) {
 		for (var idx = 0; idx < json.ports.length; idx++) {
-			if (json.ports[idx].bridge == json.bridge) {
-				cmd.push('uci -q del_list network.' + json.ports[idx].lanbridge + '.ports=' + json.ports[idx].port);
-				cmd.push('uci add_list network.' + json.ports[idx].lanbridge + '.ports=' + json.ports[idx].port);
+			if (json.ports[idx].bridge == json.bridge && config.lan_bridge_section) {
+				cmd.push('uci -q del_list network.' + config.lan_bridge_section + '.ports=' + json.ports[idx].port);
+				cmd.push('uci add_list network.' + config.lan_bridge_section + '.ports=' + json.ports[idx].port);
 			}
 		}
 		cmd.push('uci -q del network.' + json.bridge);
@@ -8388,13 +8388,15 @@ function savenetwork() {
 		} else {
 			if (portdata.bridge == json.bridge) {
 				cmd.push('uci -q del_list network.' + json.bridge + '.ports=' + portdata.port);
-				cmd.push('uci -q del_list network.' + portdata.lanbridge + '.ports=' + portdata.port);
-				cmd.push('uci add_list network.' + portdata.lanbridge + '.ports=' + portdata.port);
+				if (config.lan_bridge_section) {
+					cmd.push('uci -q del_list network.' + config.lan_bridge_section + '.ports=' + portdata.port);
+					cmd.push('uci add_list network.' + config.lan_bridge_section + '.ports=' + portdata.port);
+				}
 			}
 		}
 	}
-	if (cnt > 0) {
-		cmd.push('uci set network.' + portdata.lanbridge + '.bridge_empty=1');
+	if (cnt > 0 && config.lan_bridge_section) {
+		cmd.push('uci set network.' + config.lan_bridge_section + '.bridge_empty=1');
 	}
 
 	cancelnetwork();
