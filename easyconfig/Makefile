@@ -31,6 +31,7 @@ endef
 
 define Package/easyconfig/conffiles
 /etc/config/easyconfig
+/etc/easyconfig_leds.user
 /etc/easyconfig_watchdog.user
 /usr/lib/easyconfig/easyconfig_statistics.json.gz
 endef
