@@ -7460,7 +7460,7 @@ function checkdomain() {
 		return;
 	}
 
-	ubus_call('"file", "exec", {"command":"/etc/init.d/adblock","params":["query","' + getValue('adblock_domain') + '"]}', function(data) {
+	ubus_call('"file", "exec", {"command":"/etc/init.d/adblock","params":["search","' + getValue('adblock_domain') + '"]}', function(data) {
 		if (data.stdout) {
 			showMsg((data.stdout).replace(/\n/g,'<br>'));
 		}
