@@ -788,6 +788,11 @@ echo '"vpn":['$VPN'],'
 
 if [ -e /etc/init.d/adblock ]; then
 	echo '"adblock":true,'
+	if grep -qi "extra_command \"query\"" /etc/init.d/adblock; then
+		echo '"adblock_searchcommand":"query",'
+	else
+		echo '"adblock_searchcommand":"search",'
+	fi
 else
 	echo '"adblock":false,'
 fi
