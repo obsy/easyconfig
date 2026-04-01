@@ -17,6 +17,12 @@ else
 	DEVICESECTION="false"
 fi
 
+if [ -e /sbin/swconfig ]; then
+	SWCONFIG="true"
+else
+	SWCONFIG="false"
+fi
+
 escapeJSON() {
 	ret=$1
 	ret="${ret//\\/\\\\}"
@@ -113,7 +119,7 @@ for IFNAME in $TPORTS1; do
 	IFNAME=${IFNAME%%;*}
 	PORT=${IFNAME%%.*}
 	PORTS="${PORTS}{\"port\":\"${IFNAME}\",\"speed\":"$(cat /sys/class/net/$IFNAME/speed || echo "-1")",\"macs\":${CNT}},"
-	[ -e /sbin/swconfig ] || continue
+	"$SWCONFIG" || continue
 
 	VLAN=${IFNAME##*.}
 	if [ "$PORT" = "$VLAN" ]; then
@@ -409,6 +415,12 @@ if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	[ -n "$WAN_MACADDR_SEC" ] && WAN_MACADDR=$(uci -q get network.$WAN_MACADDR_SEC.macaddr | tr 'A-F' 'a-f')
 	WAN_MACADDR_ORIG=$(jsonfilter -i /etc/board.json -q -e '@.network.wan.macaddr' | tr 'A-F' 'a-f')
 	[ "x$WAN_MACADDR_ORIG" = "x$WAN_MACADDR" ] && WAN_MACADDR=""
+
+	WAN_VLAN_SEC=$(findsection network device type 80211q ifname $WAN_IFNAME_DEFAULT)
+	if [ -n "$WAN_VLAN_SEC" ]; then
+		WAN_VLAN_VID=$(uci -q get network.$WAN_VLAN_SEC.vid)
+		WAN_VLAN_NAME=$(uci -q get network.$WAN_VLAN_SEC.name)
+	fi
 fi
 
 WAN_IFNAMES_RNDIS=$(grep -EHi "(cdc ethernet control|rndis communications control)" /sys/class/net/*/device/interface 2>/dev/null | cut -f5 -d/ | xargs)
@@ -524,6 +536,7 @@ WAN_KEEPALIVE=$(uci -q get network.wan.keepalive)
 echo '{'
 echo '"revision":"'$REVISION'",'
 echo '"devicesection":'$DEVICESECTION','
+echo '"swconfig":'$SWCONFIG','
 echo '"system_hostname":"'$HOSTNAME'",'
 echo '"cidrnotation":'$CIDRNOTATION','
 echo '"wan_proto":"'${WAN_PROTO:-none}'",'
@@ -537,7 +550,8 @@ echo '"wan_device":"'$WAN_DEVICE'",'
 echo '"wan_pincode":"'$WAN_PINCODE'",'
 echo '"wan_ifname":"'$WAN_IFNAME'",'
 echo '"wan_ifname_default":"'$WAN_IFNAME_DEFAULT'",'
-echo '"wan_macaddr":{"macaddr":"'$WAN_MACADDR'","orig": "'$WAN_MACADDR_ORIG'", "section":"'$WAN_MACADDR_SEC'"},'
+echo '"wan_macaddr":{"macaddr":"'$WAN_MACADDR'","orig": "'$WAN_MACADDR_ORIG'","section":"'$WAN_MACADDR_SEC'"},'
+echo '"wan_vlan":{"vid":"'$WAN_VLAN_VID'","name":"'$WAN_VLAN_NAME'","section":"'$WAN_VLAN_SEC'"},'
 [ -n "$WAN_IFNAMES_RNDIS" ] && WAN_IFNAMES_RNDIS='"'${WAN_IFNAMES_RNDIS// /\",\"}'"'
 echo '"wan_ifnames_rndis":['$WAN_IFNAMES_RNDIS'],'
 echo '"wan_dashboard_url":"'$WAN_DASHBOARD_URL'",'

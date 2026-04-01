@@ -723,15 +723,18 @@ function enableWan(proto) {
 	var fields = [];
 	if (proto == 'dhcp') {
 		fields = ['wan_macaddr'];
+		if (!config.swconfig && config.devicesection) { fields.push('wan_vlan'); }
 	}
 	if (proto == 'static') {
 		fields = ['wan_ipaddr', 'wan_gateway', 'wan_macaddr', 'wan_dns1', 'wan_dns2'];
+		if (!config.swconfig && config.devicesection) { fields.push('wan_vlan'); }
 	}
 	if (proto == 'dhcp_rndis') {
 		fields = ['wan_device_rndis'];
 	}
 	if (proto == 'pppoe') {
 		fields = ['wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei'];
+		if (!config.swconfig && config.devicesection) { fields.push('wan_vlan'); }
 	}
 	if (proto == 'mbim' || proto == 'xmm') {
 		fields = ['wan_apn', 'wan_device', 'wan_pincode'];
@@ -774,7 +777,7 @@ function enableWan(proto) {
 		setValue('wan_lanto_interface2', tmp);
 	}
 
-	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_macaddr', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_rndis', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
+	var all = ['wan_ipaddr', 'wan_gateway', 'wan_dns', 'wan_dns_url', 'wan_vlan', 'wan_macaddr', 'wan_dns1', 'wan_dns2', 'wan_pincode', 'wan_device', 'wan_device_rndis', 'wan_device_mm', 'wan_apn', 'wan_dashboard_url', 'wan_modem_mode', 'wan_username', 'wan_password', 'wan_lcpef', 'wan_lcpei', 'wan_waninlan', 'wan_metered', 'wan_lanto', 'firewall_dmz'];
 	for (var idx = 0; idx < all.length; idx++) {
 		setElementEnabled(all[idx], false, false);
 	}
@@ -1288,6 +1291,7 @@ function showconfig() {
 		setValue('wan_ipaddr', config.wan_ipaddr);
 		setValue('wan_netmask', config.wan_netmask);
 		setValue('wan_gateway', config.wan_gateway);
+		setValue('wan_vlan', config.wan_vlan.vid)
 		setValue('wan_macaddr', config.wan_macaddr.macaddr);
 		setValue('wan_apn', config.wan_apn);
 		setValue('wan_device', config.wan_device);
@@ -1691,6 +1695,35 @@ function saveconfig() {
 
 		if (config.wan_ifname_default !== '') {
 			if (config.devicesection) {
+				if (!config.swconfig && (wan_type == 'static' || wan_type == 'dhcp' || wan_type == 'pppoe')) {
+					var vlan = getValue('wan_vlan');
+					if (vlan != '') {
+						if (validateNumericRange(vlan, 2, 4094) != 0) {
+							showMsg('Błąd w polu ' + getLabelText('wan_vlan'), true);
+							return;
+						}
+					}
+					var e = document.getElementById('wan_vlan');
+					e.style.color = null;
+					removeClasses(e.closest('div'), [ 'has-error' ]);
+					var wan_vlan_section = config.wan_vlan.section;
+					if (vlan == '') {
+						if (wan_vlan_section !=  '') {
+							cmd.push('uci -q del network.' + wan_vlan_section);
+						}
+						cmd.push('uci set network.wan.device=' + config.wan_ifname_default);
+					} else {
+						if (wan_vlan_section == '') {
+							cmd.push('uci add network device');
+							wan_vlan_section = '@device[-1]';
+							cmd.push('uci set network.' + wan_vlan_section + '.type=80211q');
+							cmd.push('uci set network.' + wan_vlan_section + '.ifname=' + config.wan_ifname_default);
+						}
+						cmd.push('uci set network.' + wan_vlan_section + '.name=' + config.wan_ifname_default + '.' + vlan);
+						cmd.push('uci set network.' + wan_vlan_section + '.vid=' + vlan);
+						cmd.push('uci set network.wan.device=' + config.wan_ifname_default + '.' + vlan);
+					}
+				}
 				if (config.lan_bridge_section) {
 					cmd.push('uci -q del_list network.' + config.lan_bridge_section + '.ports=' + config.wan_ifname_default);
 					if (use_wanport && getValue('wan_waninlan')) {
