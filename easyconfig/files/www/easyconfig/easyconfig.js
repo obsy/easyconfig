@@ -2826,7 +2826,7 @@ function showmodem() {
 			}
 
 			if (data.cid_dec && data.cid_dec > 0 && data.operator_mcc == 260) {
-				document.getElementById('modem_btsearch').setAttribute("href", "http://www.btsearch.pl/szukaj.php?search=" + data.cid_dec + "&siec=-1&mode=std");
+				document.getElementById('modem_btsearch').setAttribute('href', 'https://btsearch.pl/stations?q=' + data.cid_dec);
 				setDisplay('div_modem_btsearch', true);
 			} else {
 				setDisplay('div_modem_btsearch', false);
