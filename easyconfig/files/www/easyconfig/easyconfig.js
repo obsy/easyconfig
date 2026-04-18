@@ -1882,6 +1882,7 @@ function saveconfig() {
 				wlan_restart_required = true;
 			}
 			cmd.push('uci -q del wireless.' + radios[i] + '.disabled');
+			cmd.push('uci -q del wireless.' + section + '.disabled');
 		} else {
 			if (config[radios[i]].wlan_disabled != 1) {
 				wlan_restart_required = true;
