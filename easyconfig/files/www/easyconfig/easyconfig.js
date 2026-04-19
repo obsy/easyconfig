@@ -2827,7 +2827,16 @@ function showmodem() {
 			}
 
 			if (data.cid_dec && data.cid_dec > 0 && data.operator_mcc == 260) {
-				document.getElementById('modem_btsearch').setAttribute('href', 'https://btsearch.pl/stations?q=' + data.cid_dec);
+				switch (data.operator_mnc) {
+					case '01':
+					case '02':
+					case '03':
+					case '06':
+						document.getElementById('modem_btsearch').setAttribute('href', 'https://btsearch.pl/stations?mnc=260' + data.operator_mnc + '&q=' + data.cid_dec);
+						break;
+					default:
+						document.getElementById('modem_btsearch').setAttribute('href', 'https://btsearch.pl/stations?q=' + data.cid_dec);
+				}
 				setDisplay('div_modem_btsearch', true);
 			} else {
 				setDisplay('div_modem_btsearch', false);
