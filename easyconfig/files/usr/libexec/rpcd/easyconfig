@@ -835,15 +835,13 @@ MB4G="false"
 MB5GNSA="false"
 MB5GSA="false"
 if [ -e /usr/bin/modemband.sh ]; then
-	T=$(/usr/bin/modemband.sh getinfo)
-	if echo "$T" | grep -q -i 'found'; then
-		MB4G="false"
-	elif echo "$T" | grep -q -i 'unsupported'; then
+	T=$(/usr/bin/easyconfig_modemband_detect.sh)
+	if echo "$T" | grep -q -i "lte:nok"; then
 		MB4G="false"
 	else
 		MB4G="true"
-		/usr/bin/modemband.sh getsupportedbands5gnsa | grep -q -i 'unsupported' || MB5GNSA="true"
-		/usr/bin/modemband.sh getsupportedbands5gsa | grep -q -i 'unsupported' || MB5GSA="true"
+		echo "$T" | grep -q -i '5gnsa:ok' && MB5GNSA="true"
+		echo "$T" | grep -q -i '5gsa:ok' && MB5GSA="true"
 	fi
 fi
 echo '"modemband4g":'$MB4G','

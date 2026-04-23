@@ -2544,7 +2544,10 @@ function modembands4g() {
 	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
-
+			if (modem.error) {
+				showMsg('Obsługa pasm LTE nie jest dostępna');
+				return;
+			}
 			var arr = sortJSON(modem.supported, 'band', 'asc');
 			var html = '<div class="form-group">';
 			for (var idx = 0; idx < arr.length; idx++) {
@@ -2600,7 +2603,10 @@ function modembands5gnsa() {
 	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
-
+			if (modem.error || (modem.supported5gnsa).length == 0) {
+				showMsg('Obsługa pasm 5G NSA nie jest dostępna');
+				return;
+			}
 			var arr = sortJSON(modem.supported5gnsa, 'band', 'asc');
 			var html = '<div class="form-group">';
 			for (var idx = 0; idx < arr.length; idx++) {
@@ -2656,7 +2662,10 @@ function modembands5gsa() {
 	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
-
+			if (modem.error || (modem.supported5gsa).length == 0) {
+				showMsg('Obsługa pasm 5G SA nie jest dostępna');
+				return;
+			}
 			var arr = sortJSON(modem.supported5gsa, 'band', 'asc');
 			var html = '<div class="form-group">';
 			for (var idx = 0; idx < arr.length; idx++) {
