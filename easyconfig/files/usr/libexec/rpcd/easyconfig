@@ -2226,10 +2226,12 @@ show_adblock()
 	T=$(uci -q get firewall.dns_53_redirect)
 	[ "x$T" = "xredirect" ] && FORCEDNS="1" || FORCEDNS="0"
 
-	if [ -e /tmp/adb_runtime.json ]; then
-		rtfile=/tmp/adb_runtime.json
+	if [ -e /var/run/adblock/adblock.runtime.json ]; then
+		rtfile=/var/run/adblock/adblock.runtime.json
 	elif [ -e /var/run/adb_runtime.json ]; then
 		rtfile=/var/run/adb_runtime.json
+	elif [ -e /tmp/adb_runtime.json ]; then
+		rtfile=/tmp/adb_runtime.json
 	else
 		rtfile="$(uci -q get adblock.extra.adb_rtfile)"
 	fi
