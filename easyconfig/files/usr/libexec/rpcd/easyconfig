@@ -1543,7 +1543,8 @@ detect_wan()
 				echo '{"proto":"qmi","device":"'$DEVICE'","action":"pinrequired"}'
 				exit 0
 			fi
-			echo '{"proto":"qmi","device":"'$DEVICE'","apn":"internet"}'
+			APN=$(uqmi -d /dev/cdc-wdm0 --get-profile-settings 3gpp,1 2>/dev/null | jsonfilter -q -e '@.apn')
+			echo '{"proto":"qmi","device":"'$DEVICE'","apn":"'${APN:-internet}'"}'
 			exit 0
 		fi
 	fi
