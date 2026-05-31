@@ -6066,7 +6066,7 @@ function showvpn() {
 			html += '<div class="col-xs-2 col-sm-1"></div>';
 			html += '</div>';
 			for (var idx = 0; idx < sorted.length; idx++) {
-				html += '<hr><div class="row space"><div class="col-xs-12 col-sm-4 click" onclick="vpndetails(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');">' + (sorted[idx].name).escapeHTML().replace(',', '<br>') + '</div>';
+				html += '<hr><div class="row space"><div class="col-xs-12 col-sm-4 click" onclick="vpndetails(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');">' + (sorted[idx].name).escapeHTML().replaceAll(',', '<br>') + '</div>';
 				html += '<div class="col-xs-3 col-sm-3">' + vpntype(sorted[idx].proto) + '</div>';
 				if (sorted[idx].up) {
 					if (sorted[idx].proto == 'zerotier') {
