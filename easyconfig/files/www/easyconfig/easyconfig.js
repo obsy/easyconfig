@@ -332,7 +332,7 @@ function validateMAC(mac) {
 		errorCode = 2;
 	} else {
 		for (var idx = 0; idx < 6 && errorCode == 0; idx++) {
-			field = fields[idx];
+			var field = fields[idx];
 			if (field.match(/^[0-9A-Fa-f]{2}$/) == null) {
 				errorCode = 1;
 			}
@@ -342,7 +342,7 @@ function validateMAC(mac) {
 }
 
 function getLabelText(element) {
-	labels = document.getElementsByTagName('LABEL');
+	var labels = document.getElementsByTagName('LABEL');
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i].htmlFor != '') {
 			if (labels[i].htmlFor == element)
@@ -538,20 +538,20 @@ function cleanField(element) {
 
 function setValue(element, value) {
 	var e = document.getElementById(element);
-	if (e.tagName == "SELECT") {
+	if (e.tagName == 'SELECT') {
 		for (var i = 0; i < e.options.length; i++) {
 			if (e.options[i].value == value) {
 				e.selectedIndex = i;
 				break;
 			}
 		}
-	} else if (e.tagName == "P") {
+	} else if (e.tagName == 'P') {
 		e.innerHTML = value;
-	} else if (e.tagName == "H3") {
+	} else if (e.tagName == 'H3') {
+		e.textContent = value;
+	} else if (e.tagName == 'SPAN') {
 		e.innerHTML = value;
-	} else if (e.tagName == "SPAN") {
-		e.innerHTML = value;
-	} else if (e.tagName == "DIV") {
+	} else if (e.tagName == 'DIV') {
 		e.innerHTML = value;
 	} else if (e.type === 'checkbox') {
 		e.checked = value;
@@ -679,7 +679,7 @@ function detectwan(pin) {
 				showMsg('Nie wykryto żadnego dostępnego połączenia z internetem');
 				return;
 			}
-			msg = '';
+			var msg = '';
 			msg += '<div class="row space"><div class="col-xs-12 text-center">Proponowane ustawienia<hr></div></div>';
 			msg += '<div class="row space">';
 			msg += '<div class="col-xs-6 text-right">Typ połączenia</div>';
