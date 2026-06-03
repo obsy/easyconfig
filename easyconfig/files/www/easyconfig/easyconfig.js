@@ -1350,8 +1350,8 @@ function showconfig() {
 			document.getElementById('div_radio_content').insertAdjacentHTML('beforeend', html);
 			if (i > 0) { setDisplay('div_wlan_copy_link_' + i, true); }
 
-			select = removeOptions('wlan_channel_' + i);
-			obj = config[radios[i]].wlan_channels;
+			var select = removeOptions('wlan_channel_' + i);
+			var obj = config[radios[i]].wlan_channels;
 			var opt = document.createElement('option');
 			opt.value = '0';
 			opt.innerHTML = 'automatycznie';
@@ -3779,7 +3779,7 @@ function getmanuf(mac) {
 	return '-';
 }
 
-wifigraph = {
+var wifigraph = {
 	axisTop: 10,
 	axisRight: 5,
 	axisBottom: 20,
@@ -4376,7 +4376,7 @@ function clientscallback(sortby) {
 			for (var idx = 0; idx < sorted.length; idx++) {
 				if (!sorted[idx].active) { continue; }
 				ctx.fillStyle = string2color(sorted[idx].mac);
-				radian = (2 * Math.PI) * ((sorted[idx].tx + sorted[idx].rx) / total);
+				var radian = (2 * Math.PI) * ((sorted[idx].tx + sorted[idx].rx) / total);
 				ctx.beginPath();
 				ctx.moveTo(middle.x, middle.y);
 				ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
@@ -5276,7 +5276,7 @@ function gotoadblock(domain) {
 /*****************************************************************************/
 
 function lastDays(cnt,d) {
-	d = +(d || new Date());
+	var d = +(d || new Date());
 	var days = [];
 	var i=cnt;
 	while (i--) {
@@ -8756,7 +8756,7 @@ window.onload = easyconfig_onload;
 
 /*****************************************************************************/
 
-livegraph = {
+var livegraph = {
 	axisTop: 10,
 	axisRight: 2,
 	axisBottom: 20,
@@ -8924,7 +8924,7 @@ livegraph = {
 	}
 };
 
-staticgraph = {
+var staticgraph = {
 	axisTop: 4,
 	axisRight: 40,
 	axisBottom: 40,
