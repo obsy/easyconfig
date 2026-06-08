@@ -15,7 +15,7 @@ if [ $INTERFACE = "wan" ]; then
 		done
 	fi
 
-	OVPNS=$(uci show openvpn | awk -F. '/trigger='\''wan'\''$/{print $2}')
+	OVPNS=$(uci -q show openvpn | awk -F. '/trigger='\''wan'\''$/{print $2}')
 	if [ -n "$OVPNS" ]; then
 		sleep 5
 		for OVPN in $OVPNS; do
