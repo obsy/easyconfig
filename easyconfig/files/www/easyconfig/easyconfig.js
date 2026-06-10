@@ -7074,7 +7074,7 @@ function savewireguard() {
 				var ret = checkIpType(e.value, getValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy));
 				if (ret == -1 || ret == 255) {
 					proofreadText(document.getElementById('vpn_wireguard_allowed_ip_' + idx + '_' + idy), function(text){ return 0; }, 1);
-					showError('vpn_wireguard_error', 'vpn_wireguard_allowed_ip_' + idx + '_' + idy, 'Błąd w polu ' + getLabelText('vpn_wireguard_allowed_ips_' + idx + '_' + idy) + '<br><br>Adres IP jest spoza zakresu adresacji sieci');
+					showError('vpn_wireguard_error', 'vpn_wireguard_allowed_ip_' + idx + '_' + idy, 'Błąd w polu ' + getLabelText('vpn_wireguard_allowed_ip_' + idx + '_' + idy) + '<br><br>Adres IP jest spoza zakresu adresacji sieci');
 					return;
 				}
 			}
