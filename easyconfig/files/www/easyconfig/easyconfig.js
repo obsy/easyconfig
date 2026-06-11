@@ -6462,7 +6462,7 @@ function vpn_parse_wireguard() {
 							jdx++;
 						}
 						setValue('vpn_wireguard_ip_' + jdx, ips[kdx].split('/')[0]);
-						setValue('vpn_wireguard_netmask_' + jdx, ips[kdx].split('/')[1]);
+						setValue('vpn_wireguard_netmask_' + jdx, cidrToMask(ips[kdx].split('/')[1]));
 					}
 				}
 				return;
@@ -6509,7 +6509,7 @@ function vpn_parse_wireguard() {
 							jdx++;
 						}
 						setValue('vpn_wireguard_allowed_ip_' + idx + '_' + jdx, ips[kdx].split('/')[0]);
-						setValue('vpn_wireguard_allowed_netmask_' + idx + '_' + jdx, ips[kdx].split('/')[0]);
+						setValue('vpn_wireguard_allowed_netmask_' + idx + '_' + jdx, cidrToMask(ips[kdx].split('/')[1]));
 					}
 				}
 				return;
