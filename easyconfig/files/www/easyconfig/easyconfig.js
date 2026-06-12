@@ -6623,37 +6623,7 @@ function saveopenvpn() {
 	cmd.push('cat /tmp/' + interface + ' > $CFG');
 	cmd.push('rm /tmp/' + interface);
 
-	cmd.push('uci set firewall.' + interface + '=zone');
-	cmd.push('uci set firewall.' + interface + '.name=' + interface);
-	cmd.push('uci -q del firewall.' + interface + '.network');
-	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
-	switch (getValue('vpn_openvpn_zone_input')) {
-		case 'a':
-			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
-			break;
-		case 'd':
-			cmd.push('uci set firewall.' + interface + '.input=DROP');
-			break;
-		default:
-			cmd.push('uci set firewall.' + interface + '.input=REJECT');
-	}
-	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
-	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
-	if (getValue('vpn_openvpn_lanto')) {
-		cmd.push('uci set firewall.' + interface + '.masq=1');
-		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
-		cmd.push('uci set firewall.f1' + interface + '=forwarding');
-		cmd.push('uci set firewall.f1' + interface + '.src=lan');
-		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
-		cmd.push('uci set firewall.f2' + interface + '=forwarding');
-		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
-		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
-	} else {
-		cmd.push('uci -q del firewall.' + interface + '.masq');
-		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
-		cmd.push('uci -q del firewall.f1' + interface);
-		cmd.push('uci -q del firewall.f2' + interface);
-	}
+	savevpnfirewall(cmd, interface, getValue('vpn_openvpn_zone_input'), getValue('vpn_openvpn_lanto'));
 
 	if (getValue('vpn_openvpn_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -6740,37 +6710,7 @@ function savepptp() {
 		cmd.push('uci set network.' + interface + '.pppd_options=\\\"nomppe\\\"');
 	}
 
-	cmd.push('uci set firewall.' + interface + '=zone');
-	cmd.push('uci set firewall.' + interface + '.name=' + interface);
-	cmd.push('uci -q del firewall.' + interface + '.network');
-	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
-	switch (getValue('vpn_pptp_zone_input')) {
-		case 'a':
-			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
-			break;
-		case 'd':
-			cmd.push('uci set firewall.' + interface + '.input=DROP');
-			break;
-		default:
-			cmd.push('uci set firewall.' + interface + '.input=REJECT');
-	}
-	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
-	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
-	if (getValue('vpn_pptp_lanto')) {
-		cmd.push('uci set firewall.' + interface + '.masq=1');
-		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
-		cmd.push('uci set firewall.f1' + interface + '=forwarding');
-		cmd.push('uci set firewall.f1' + interface + '.src=lan');
-		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
-		cmd.push('uci set firewall.f2' + interface + '=forwarding');
-		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
-		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
-	} else {
-		cmd.push('uci -q del firewall.' + interface + '.masq');
-		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
-		cmd.push('uci -q del firewall.f1' + interface);
-		cmd.push('uci -q del firewall.f2' + interface);
-	}
+	savevpnfirewall(cmd, interface, getValue('vpn_pptp_zone_input'), getValue('vpn_pptp_lanto'));
 
 	if (getValue('vpn_pptp_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -6842,37 +6782,7 @@ function savesstp() {
 	cmd.push('uci set network.' + interface + '.username=\\\"' + escapeShell(getValue('vpn_sstp_username')) + '\\\"');
 	cmd.push('uci set network.' + interface + '.password=\\\"' + escapeShell(getValue('vpn_sstp_password')) + '\\\"');
 
-	cmd.push('uci set firewall.' + interface + '=zone');
-	cmd.push('uci set firewall.' + interface + '.name=' + interface);
-	cmd.push('uci -q del firewall.' + interface + '.network');
-	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
-	switch (getValue('vpn_sstp_zone_input')) {
-		case 'a':
-			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
-			break;
-		case 'd':
-			cmd.push('uci set firewall.' + interface + '.input=DROP');
-			break;
-		default:
-			cmd.push('uci set firewall.' + interface + '.input=REJECT');
-	}
-	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
-	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
-	if (getValue('vpn_sstp_lanto')) {
-		cmd.push('uci set firewall.' + interface + '.masq=1');
-		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
-		cmd.push('uci set firewall.f1' + interface + '=forwarding');
-		cmd.push('uci set firewall.f1' + interface + '.src=lan');
-		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
-		cmd.push('uci set firewall.f2' + interface + '=forwarding');
-		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
-		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
-	} else {
-		cmd.push('uci -q del firewall.' + interface + '.masq');
-		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
-		cmd.push('uci -q del firewall.f1' + interface);
-		cmd.push('uci -q del firewall.f2' + interface);
-	}
+	savevpnfirewall(cmd, interface, getValue('vpn_sstp_zone_input'), getValue('vpn_sstp_lanto'));
 
 	if (getValue('vpn_sstp_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -7138,37 +7048,7 @@ function savewireguard() {
 		}
 	}
 
-	cmd.push('uci set firewall.' + interface + '=zone');
-	cmd.push('uci set firewall.' + interface + '.name=' + interface);
-	cmd.push('uci -q del firewall.' + interface + '.network');
-	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
-	switch (getValue('vpn_wireguard_zone_input')) {
-		case 'a':
-			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
-			break;
-		case 'd':
-			cmd.push('uci set firewall.' + interface + '.input=DROP');
-			break;
-		default:
-			cmd.push('uci set firewall.' + interface + '.input=REJECT');
-	}
-	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
-	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
-	if (getValue('vpn_wireguard_lanto')) {
-		cmd.push('uci set firewall.' + interface + '.masq=1');
-		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
-		cmd.push('uci set firewall.f1' + interface + '=forwarding');
-		cmd.push('uci set firewall.f1' + interface + '.src=lan');
-		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
-		cmd.push('uci set firewall.f2' + interface + '=forwarding');
-		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
-		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
-	} else {
-		cmd.push('uci -q del firewall.' + interface + '.masq');
-		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
-		cmd.push('uci -q del firewall.f1' + interface);
-		cmd.push('uci -q del firewall.f2' + interface);
-	}
+	savevpnfirewall(cmd, interface, getValue('vpn_wireguard_zone_input'), getValue('vpn_wireguard_lanto'));
 
 	if (getValue('vpn_wireguard_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -7273,37 +7153,7 @@ function savezerotier() {
 	cmd.push('uci set network.' + interface + '.proto=none');
 	cmd.push('uci set network.' + interface + '.device=zt' + interface);
 
-	cmd.push('uci set firewall.' + interface + '=zone');
-	cmd.push('uci set firewall.' + interface + '.name=' + interface);
-	cmd.push('uci -q del firewall.' + interface + '.network');
-	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
-	switch (getValue('vpn_zerotier_zone_input')) {
-		case 'a':
-			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
-			break;
-		case 'd':
-			cmd.push('uci set firewall.' + interface + '.input=DROP');
-			break;
-		default:
-			cmd.push('uci set firewall.' + interface + '.input=REJECT');
-	}
-	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
-	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
-	if (getValue('vpn_zerotier_lanto')) {
-		cmd.push('uci set firewall.' + interface + '.masq=1');
-		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
-		cmd.push('uci set firewall.f1' + interface + '=forwarding');
-		cmd.push('uci set firewall.f1' + interface + '.src=lan');
-		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
-		cmd.push('uci set firewall.f2' + interface + '=forwarding');
-		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
-		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
-	} else {
-		cmd.push('uci -q del firewall.' + interface + '.masq');
-		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
-		cmd.push('uci -q del firewall.f1' + interface);
-		cmd.push('uci -q del firewall.f2' + interface);
-	}
+	savevpnfirewall(cmd, interface, getValue('vpn_zerotier_zone_input'), getValue('vpn_zerotier_lanto'));
 
 	if (getValue('vpn_zerotier_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -7335,6 +7185,40 @@ function savezerotier() {
 	cmd.push('/etc/init.d/zerotier restart');
 
 	execute(cmd, showvpn);
+}
+
+function savevpnfirewall(cmd, interface, inputpolicy, lanto) {
+	cmd.push('uci set firewall.' + interface + '=zone');
+	cmd.push('uci set firewall.' + interface + '.name=' + interface);
+	cmd.push('uci -q del firewall.' + interface + '.network');
+	cmd.push('uci add_list firewall.' + interface + '.network=' + interface);
+	switch (inputpolicy) {
+		case 'a':
+			cmd.push('uci set firewall.' + interface + '.input=ACCEPT');
+			break;
+		case 'd':
+			cmd.push('uci set firewall.' + interface + '.input=DROP');
+			break;
+		default:
+			cmd.push('uci set firewall.' + interface + '.input=REJECT');
+	}
+	cmd.push('uci set firewall.' + interface + '.output=ACCEPT');
+	cmd.push('uci set firewall.' + interface + '.forward=REJECT');
+	if (lanto) {
+		cmd.push('uci set firewall.' + interface + '.masq=1');
+		cmd.push('uci set firewall.' + interface + '.mtu_fix=1');
+		cmd.push('uci set firewall.f1' + interface + '=forwarding');
+		cmd.push('uci set firewall.f1' + interface + '.src=lan');
+		cmd.push('uci set firewall.f1' + interface + '.dest=' + interface);
+		cmd.push('uci set firewall.f2' + interface + '=forwarding');
+		cmd.push('uci set firewall.f2' + interface + '.dest=lan');
+		cmd.push('uci set firewall.f2' + interface + '.src=' + interface);
+	} else {
+		cmd.push('uci -q del firewall.' + interface + '.masq');
+		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
+		cmd.push('uci -q del firewall.f1' + interface);
+		cmd.push('uci -q del firewall.f2' + interface);
+	}
 }
 
 /*****************************************************************************/
