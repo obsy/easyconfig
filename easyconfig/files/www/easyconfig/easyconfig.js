@@ -1375,17 +1375,16 @@ function showconfig() {
 			}
 
 			var wifidesc1 = '';
-			var wifidesc2 = '';
+			var wifidesc2 = [];
 			if ((config[radios[i]].wlan_hwmode).includes('n')) { wifidesc1 = ' 4, ' + config[radios[i]].wlan_hwmode + ','; }
 			if ((config[radios[i]].wlan_hwmode).includes('ac')) { wifidesc1 = ' 5, ' + config[radios[i]].wlan_hwmode + ','; }
 			if ((config[radios[i]].wlan_hwmode).includes('ax')) { wifidesc1 = ' 6, ' + config[radios[i]].wlan_hwmode + ','; }
-			if (is_radio2) { wifidesc2 = ' 2.4 GHz'; }
-			if (is_radio5) { wifidesc2 = ' 5 GHz'; }
-			if (is_radio2 && is_radio5) { wifidesc2 = ' 2.4/5 GHz'; }
-			if (is_radio6) { wifidesc2 = ' 6 GHz'; }
-			if (is_radio2 && is_radio5 && is_radio6) { wifidesc2 = ' 2.4/5/6 GHz'; }
-			setValue('radio_' + i, 'Wi-Fi' + wifidesc1 + wifidesc2);
-			config[radios[i]]['description'] = 'Wi-Fi' + wifidesc1 + wifidesc2;
+			if ((config[radios[i]].wlan_hwmode).includes('be')) { wifidesc1 = ' 7, ' + config[radios[i]].wlan_hwmode + ','; }
+			if (is_radio2) { wifidesc2.push('2.4'); }
+			if (is_radio5) { wifidesc2.push('5'); }
+			if (is_radio6) { wifidesc2.push('6'); }
+			config[radios[i]]['description'] = 'Wi-Fi' + wifidesc1 + (wifidesc2.length > 0 ? ' ' + wifidesc2.sort().join('/') + ' GHz' : '');
+			setValue('radio_' + i, config[radios[i]]['description']);
 
 			setValue('wlan_enabled_' + i, (config[radios[i]].wlan_disabled != 1));
 			setValue('wlan_channel_' + i, config[radios[i]].wlan_channel);
