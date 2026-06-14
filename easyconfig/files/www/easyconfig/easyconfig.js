@@ -6866,7 +6866,7 @@ function addwireguardallowedips(idx) {
 	var html = ('<div id="div_vpn_wireguard_allowed_ips' + idx + '_' + idy + '">' + document.getElementById('div_vpn_wireguard_allowed_ips_idx_template').innerHTML + '</div>').replaceAll('_idx', idx).replaceAll('_idy', '_' + idy);
 	document.getElementById('vpn_wireguard_allowed_ips' + idx + '_content').insertAdjacentHTML('beforeend', html);
 	setValue('vpn_wireguard_allowed_ip' + idx + '_' + idy, '0.0.0.0');
-	setValue('vpn_wireguard_allowed_netmask' + idx + '_' + idy, '0');
+	setValue('vpn_wireguard_allowed_netmask' + idx + '_' + idy, '0.0.0.0');
 	idy++;
 	setValue('vpn_wireguard_allowed_ips' + idx, idy);
 }
