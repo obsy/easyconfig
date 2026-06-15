@@ -2474,7 +2474,7 @@
 					</div>
 					<div class="col-sm-6 col2of2 input-group">
 						<select id="vpn_wireguard_netmask_idx" class="form-control"></select>
-						<span class="click input-group-element" title="usuń adres IP" onclick="removewireguardips('_idx');"><i data-feather="trash-2"></i></span>
+						<span class="click input-group-element" title="usuń adres IP" onclick="removewireguardips(idx);"><i data-feather="trash-2"></i></span>
 					</div>
 				</div>
 			</div>
@@ -2492,7 +2492,7 @@
 				<label for="vpn_wireguard_description_idx" class="col-xs-4 col-sm-3 control-label">Nazwa</label>
 				<div class="col-xs-8 col-sm-9 input-group">
 					<input id="vpn_wireguard_description_idx" class="form-control" onkeyup="proofreadLengthRange(this, 1, 255);">
-					<span class="click input-group-element" title="usuń tunel" onclick="removewireguardpeer('_idx');"><i data-feather="trash-2"></i></span>
+					<span class="click input-group-element" title="usuń tunel" onclick="removewireguardpeer(idx);"><i data-feather="trash-2"></i></span>
 				</div>
 			</div>
 
@@ -2545,7 +2545,7 @@
 						</div>
 						<div class="col-sm-6 col2of2 input-group">
 							<select id="vpn_wireguard_allowed_netmask_idx_idy" class="form-control"></select>
-							<span class="click input-group-element" title="usuń dozwolony adres IP" onclick="removewireguardallowedips('_idx_idy');"><i data-feather="trash-2"></i></span>
+							<span class="click input-group-element" title="usuń dozwolony adres IP" onclick="removewireguardallowedips(idx,idy);"><i data-feather="trash-2"></i></span>
 						</div>
 					</div>
 				</div>
@@ -2553,7 +2553,7 @@
 			</div>
 			<div id="vpn_wireguard_allowed_ips_idx_content"></div>
 			<div class="text-right">
-				<input type="button" class="btn btn-default" onclick="addwireguardallowedips('_idx');" value="Nowy adres IP">
+				<input type="button" class="btn btn-default" onclick="addwireguardallowedips(idx);" value="Nowy adres IP">
 			</div>
 
 			<hr>

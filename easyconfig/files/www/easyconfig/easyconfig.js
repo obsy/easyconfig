@@ -6224,7 +6224,7 @@ function vpndetails(proto, interface, section) {
 				setValue('vpn_wireguard_endpoint_port_' + idx, data.peers[idx].endpoint_port);
 
 				for (var idy = 0; idy < data.peers[idx].allowed_ips.length; idy++) {
-					addwireguardallowedips('_' + idx);
+					addwireguardallowedips(idx);
 					setValue('vpn_wireguard_allowed_ip_' + idx + '_' + idy, data.peers[idx].allowed_ips[idy][0]);
 					setValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy, data.peers[idx].allowed_ips[idy][1]);
 				}
@@ -6504,7 +6504,7 @@ function vpn_parse_wireguard() {
 					for (var kdx = 0; kdx < ips.length; kdx++) {
 						if (ips[kdx] == '::/0') { continue; }
 						if (kdx > 0) {
-							addwireguardallowedips('_' + idx);
+							addwireguardallowedips(idx);
 							jdx++;
 						}
 						setValue('vpn_wireguard_allowed_ip_' + idx + '_' + jdx, ips[kdx].split('/')[0]);
@@ -6832,9 +6832,8 @@ function cancelwireguard() {
 }
 
 function addwireguardips() {
-	var idx = getValue('vpn_wireguard_ips');
-	if (idx == '') { idx = 0; }
-	var html = ('<div id="div_vpn_wireguard_ips_idx">' + document.getElementById('div_vpn_wireguard_ips_template').innerHTML + '</div>').replaceAll('_idx', '_' + idx);
+	var idx = parseInt(getValue('vpn_wireguard_ips')) || 0;
+	var html = ('<div id="div_vpn_wireguard_ips_idx">' + document.getElementById('div_vpn_wireguard_ips_template').innerHTML + '</div>').replaceAll('idx', idx);
 	document.getElementById('vpn_wireguard_ips_content').insertAdjacentHTML('beforeend', html);
 	setValue('vpn_wireguard_netmask_' + idx, '255.255.255.0');
 	idx++;
@@ -6842,37 +6841,35 @@ function addwireguardips() {
 }
 
 function removewireguardips(idx) {
-	document.getElementById('div_vpn_wireguard_ips' + idx).remove();
+	document.getElementById('div_vpn_wireguard_ips_' + idx).remove();
 }
 
 function addwireguardpeer(withallowedip) {
-	var idx = getValue('vpn_wireguard_peers');
-	if (idx == '') { idx = 0; }
-	var html = ('<div id="div_vpn_wireguard_peer_idx">' + document.getElementById('div_vpn_wireguard_peer_template').innerHTML + '</div>').replaceAll('_idx', "_" + idx);
+	var idx = parseInt(getValue('vpn_wireguard_peers')) || 0;
+	var html = ('<div id="div_vpn_wireguard_peer_idx">' + document.getElementById('div_vpn_wireguard_peer_template').innerHTML + '</div>').replaceAll('idx', idx);
 	document.getElementById('vpn_wireguard_peers_content').insertAdjacentHTML('beforeend', html);
-	if (withallowedip) { addwireguardallowedips('_' + idx); }
+	if (withallowedip) { addwireguardallowedips(idx); }
 	setValue('vpn_wireguard_enabled_' + idx, true);
 	idx++;
 	setValue('vpn_wireguard_peers', idx);
 }
 
 function removewireguardpeer(idx) {
-	document.getElementById('div_vpn_wireguard_peer' + idx).remove();
+	document.getElementById('div_vpn_wireguard_peer_' + idx).remove();
 }
 
 function addwireguardallowedips(idx) {
-	var idy = getValue('vpn_wireguard_allowed_ips' + idx);
-	if (idy == '') { idy = 0; }
-	var html = ('<div id="div_vpn_wireguard_allowed_ips' + idx + '_' + idy + '">' + document.getElementById('div_vpn_wireguard_allowed_ips_idx_template').innerHTML + '</div>').replaceAll('_idx', idx).replaceAll('_idy', '_' + idy);
-	document.getElementById('vpn_wireguard_allowed_ips' + idx + '_content').insertAdjacentHTML('beforeend', html);
-	setValue('vpn_wireguard_allowed_ip' + idx + '_' + idy, '0.0.0.0');
-	setValue('vpn_wireguard_allowed_netmask' + idx + '_' + idy, '0.0.0.0');
+	var idy = parseInt(getValue('vpn_wireguard_allowed_ips_' + idx)) || 0;
+	var html = ('<div id="div_vpn_wireguard_allowed_ips_' + idx + '_' + idy + '">' + document.getElementById('div_vpn_wireguard_allowed_ips_idx_template').innerHTML + '</div>').replaceAll('idx', idx).replaceAll('idy', idy);
+	document.getElementById('vpn_wireguard_allowed_ips_' + idx + '_content').insertAdjacentHTML('beforeend', html);
+	setValue('vpn_wireguard_allowed_ip_' + idx + '_' + idy, '0.0.0.0');
+	setValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy, '0.0.0.0');
 	idy++;
-	setValue('vpn_wireguard_allowed_ips' + idx, idy);
+	setValue('vpn_wireguard_allowed_ips_' + idx, idy);
 }
 
-function removewireguardallowedips(idx) {
-	document.getElementById('div_vpn_wireguard_allowed_ips' + idx).remove();
+function removewireguardallowedips(idx, idy) {
+	document.getElementById('div_vpn_wireguard_allowed_ips_' + idx + '_' + idy).remove();
 }
 
 function removewireguard() {
@@ -6920,7 +6917,7 @@ function savewireguard() {
 		}
 	}
 
-	var cnt = getValue('vpn_wireguard_ips');
+	var cnt = parseInt(getValue('vpn_wireguard_ips')) || 0;
 	for (var idx = 0; idx < cnt; idx++) {
 		e = document.getElementById('vpn_wireguard_ip_' + idx);
 		if (e) {
@@ -6937,7 +6934,7 @@ function savewireguard() {
 		}
 	}
 
-	cnt = getValue('vpn_wireguard_peers');
+	cnt = parseInt(getValue('vpn_wireguard_peers')) || 0;
 	for (var idx = 0; idx < cnt; idx++) {
 		e = document.getElementById('vpn_wireguard_description_' + idx);
 		if (!e) { continue; }
@@ -7010,7 +7007,7 @@ function savewireguard() {
 	}
 	cmd.push('uci -q del network.' + interface + '.addresses');
 
-	cnt = getValue('vpn_wireguard_ips');
+	cnt = parseInt(getValue('vpn_wireguard_ips')) || 0;
 	for (var idx = 0; idx < cnt; idx++) {
 		e = document.getElementById('vpn_wireguard_ip_' + idx);
 		if (e) {
@@ -7021,7 +7018,7 @@ function savewireguard() {
 	cmd.push('T=$(uci show network | awk -F [=.] \'/=wireguard_' + interface + '$/{print $2}\' | sort -r)');
 	cmd.push('for i in $T; do uci -q del network.$i; done');
 
-	cnt = getValue('vpn_wireguard_peers');
+	cnt = parseInt(getValue('vpn_wireguard_peers')) || 0;
 	for (var idx = 0; idx < cnt; idx++) {
 		e = document.getElementById('vpn_wireguard_description_' + idx);
 		if (!e) { continue; }
@@ -8316,7 +8313,7 @@ function savenetwork() {
 	}
 
 	// lan
-	var cnt = getValue('network_port_cnt');
+	var cnt = parseInt(getValue('network_port_cnt')) || 0;
 	var portdata;
 	for (var idx = 0; idx < cnt; idx++) {
 		portdata = JSON.parse(atob(getValue('network_port_data_' + idx)));
