@@ -21,41 +21,41 @@
 <body>
 
 <div id="menu" class="sidenav">
-	<a href="#" class="closebtn" onclick="closenav();">&times;</a>
-	<a href="#" onclick="btn_pages('status');"><i data-feather="bar-chart-2" class="iconwithtext"></i>Status</a>
-	<a href="#" onclick="btn_pages('config');"><i data-feather="settings" class="iconwithtext"></i>Ustawienia</a>
+	<a href="#" class="closebtn" onclick="closenav(); return false;">&times;</a>
+	<a href="#" onclick="btn_pages('status'); return false;"><i data-feather="bar-chart-2" class="iconwithtext"></i>Status</a>
+	<a href="#" onclick="btn_pages('config'); return false;"><i data-feather="settings" class="iconwithtext"></i>Ustawienia</a>
 	<div id="menu_networks">
-		<a href="#" onclick="btn_pages('networks');"><i data-feather="share-2" class="iconwithtext"></i>Sieci dodatkowe</a>
+		<a href="#" onclick="btn_pages('networks'); return false;"><i data-feather="share-2" class="iconwithtext"></i>Sieci dodatkowe</a>
 	</div>
-	<a href="#" onclick="btn_pages('system');"><i data-feather="server" class="iconwithtext"></i>System</a>
-	<a href="#" onclick="btn_pages('watchdog');"><i data-feather="activity" class="iconwithtext"></i>Monitor połączenia</a>
+	<a href="#" onclick="btn_pages('system'); return false;"><i data-feather="server" class="iconwithtext"></i>System</a>
+	<a href="#" onclick="btn_pages('watchdog'); return false;"><i data-feather="activity" class="iconwithtext"></i>Monitor połączenia</a>
 	<div id="menu_wlan">
-		<a href="#" onclick="btn_pages('sitesurvey');"><i data-feather="wifi" class="iconwithtext"></i>Sieci Wi-Fi</a>
+		<a href="#" onclick="btn_pages('sitesurvey'); return false;"><i data-feather="wifi" class="iconwithtext"></i>Sieci Wi-Fi</a>
 	</div>
-	<a href="#" onclick="btn_pages('clients');"><i data-feather="users" class="iconwithtext"></i>Klienci</a>
-	<a href="#" onclick="btn_pages('clientslogs');"><i data-feather="book-open" class="iconwithtext"></i>Historia połączeń</a>
+	<a href="#" onclick="btn_pages('clients'); return false;"><i data-feather="users" class="iconwithtext"></i>Klienci</a>
+	<a href="#" onclick="btn_pages('clientslogs'); return false;"><i data-feather="book-open" class="iconwithtext"></i>Historia połączeń</a>
 	<div id="menu_queries" style="display:none;">
-		<a href="#" onclick="btn_pages('queries');"><i data-feather="search" class="iconwithtext"></i>Zapytania DNS</a>
+		<a href="#" onclick="btn_pages('queries'); return false;"><i data-feather="search" class="iconwithtext"></i>Zapytania DNS</a>
 	</div>
-	<a href="#" onclick="btn_pages('traffic');"><i data-feather="repeat" class="iconwithtext"></i>Transfer</a>
+	<a href="#" onclick="btn_pages('traffic'); return false;"><i data-feather="repeat" class="iconwithtext"></i>Transfer</a>
 	<div id="menu_ussdsms" style="display:none;">
-		<a href="#" onclick="btn_pages('ussdsms');"><i data-feather="mail" class="iconwithtext"></i>USSD / SMS</a>
+		<a href="#" onclick="btn_pages('ussdsms'); return false;"><i data-feather="mail" class="iconwithtext"></i>USSD / SMS</a>
 	</div>
 	<div id="menu_vpn" style="display:none;">
-		<a href="#" onclick="btn_pages('vpn');"><i data-feather="shield" class="iconwithtext"></i>VPN</a>
+		<a href="#" onclick="btn_pages('vpn'); return false;"><i data-feather="shield" class="iconwithtext"></i>VPN</a>
 	</div>
-	<a href="#" onclick="btn_pages('adblock');"><i data-feather="globe" class="iconwithtext"></i>Blokada domen</a>
-	<a href="#" onclick="btn_pages('nightmode');"><i data-feather="moon" class="iconwithtext"></i>Tryb nocny</a>
+	<a href="#" onclick="btn_pages('adblock'); return false;"><i data-feather="globe" class="iconwithtext"></i>Blokada domen</a>
+	<a href="#" onclick="btn_pages('nightmode'); return false;"><i data-feather="moon" class="iconwithtext"></i>Tryb nocny</a>
 	<div id="menu_gps" style="display:none;">
-		<a href="#" onclick="btn_pages('gps');"><i data-feather="map-pin" class="iconwithtext"></i>GPS</a>
+		<a href="#" onclick="btn_pages('gps'); return false;"><i data-feather="map-pin" class="iconwithtext"></i>GPS</a>
 	</div>
 	<div id="menu_wol" style="display:none;">
-		<a href="#" onclick="btn_pages('wol');"><i data-feather="trending-up" class="iconwithtext"></i>WoL</a>
+		<a href="#" onclick="btn_pages('wol'); return false;"><i data-feather="trending-up" class="iconwithtext"></i>WoL</a>
 	</div>
 	<div id="menu_luci" style="display:none;">
 		<a href="/cgi-bin/luci" target="_blank"><i data-feather="external-link" class="iconwithtext"></i>LuCI</a>
 	</div>
-	<a href="#" onclick="btn_pages('logout');"><i data-feather="log-out" class="iconwithtext"></i>Wyloguj</a>
+	<a href="#" onclick="btn_pages('logout'); return false;"><i data-feather="log-out" class="iconwithtext"></i>Wyloguj</a>
 </div>
 
 <div class="container">
@@ -140,7 +140,7 @@
 				</div>
 				<div class="row" id="div_modem_addon" style="display:none;">
 					<div class="col-xs-6 col-xs-offset-6">
-					<p><a href="#" class="click" onclick="modemaddon();">więcej parametrów</a></p>
+					<p><a href="#" class="click" onclick="modemaddon(); return false;">więcej parametrów</a></p>
 					</div>
 				</div>
 				<div class="row" id="div_modem_btsearch" style="display:none;">
@@ -214,7 +214,7 @@
 		<div class="row" id="div_vpn_up_status" style="display:none;">
 			<div class="col-xs-6 text-right">VPN</div>
 			<div class="col-xs-6">
-			<a href="#" class="click" onclick="btn_pages('vpn');"><p>aktywny &rarr;</p></a>
+			<a href="#" class="click" onclick="btn_pages('vpn'); return false;"><p>aktywny &rarr;</p></a>
 			</div>
 		</div>
 		<div class="row" id="div_wan_lanto_status" style="display:none;">
@@ -238,7 +238,7 @@
 		<div class="row">
 			<div class="col-xs-6 text-right">Połączonych klientów</div>
 			<div class="col-xs-6">
-			<a href="#" class="click" onclick="btn_pages('clients');"><p id="wlan_clients">0</p></a>
+			<a href="#" class="click" onclick="btn_pages('clients'); return false;"><p id="wlan_clients">0</p></a>
 			</div>
 		</div>
 	</div>
@@ -248,7 +248,7 @@
 		<div class="row">
 			<div class="col-xs-6 text-right">Połączonych klientów</div>
 			<div class="col-xs-6">
-			<a href="#" class="click" onclick="btn_pages('clients');"><p id="lan_clients">0</p></a>
+			<a href="#" class="click" onclick="btn_pages('clients'); return false;"><p id="lan_clients">0</p></a>
 			</div>
 		</div>
 		<div id="div_status_lan_ports">
@@ -666,7 +666,7 @@
 						</label>
 					</div>
 					<div class="col-xs-6 control-label">
-					<a href="#" class="click" onclick="showstatistics();">zobacz statystykę &rarr;</a>
+					<a href="#" class="click" onclick="showstatistics(); return false;">zobacz statystykę &rarr;</a>
 					</div>
 				</div>
 			</div>
@@ -786,27 +786,27 @@
 		</div>
 		<div class="row">
 			<div class="col-xs-6 col-xs-offset-6">
-			<p><a href="#" class="click" onclick="modemsettings();">ustawienia dodatkowe</a></p>
+			<p><a href="#" class="click" onclick="modemsettings(); return false;">ustawienia dodatkowe</a></p>
 			</div>
 		</div>
 		<div id="div_modem_modemat" class="row" style="display:none;">
 			<div class="col-xs-6 col-xs-offset-6">
-			<p><a href="#" class="click" onclick="modemat();">polecenia AT</a></p>
+			<p><a href="#" class="click" onclick="modemat(); return false;">polecenia AT</a></p>
 			</div>
 		</div>
 		<div class="row">
 			<div id="link_modembands4g" class="col-xs-6 col-xs-offset-6"  style="display:none;">
-			<p><a href="#" class="click" onclick="modembands4g();">pasma LTE</a></p>
+			<p><a href="#" class="click" onclick="modembands4g(); return false;">pasma LTE</a></p>
 			</div>
 		</div>
 		<div class="row">
 			<div id="link_modembands5gnsa" class="col-xs-6 col-xs-offset-6"  style="display:none;">
-			<p><a href="#" class="click" onclick="modembands5gnsa();">pasma 5G NSA</a></p>
+			<p><a href="#" class="click" onclick="modembands5gnsa(); return false;">pasma 5G NSA</a></p>
 			</div>
 		</div>
 		<div class="row">
 			<div id="link_modembands5gsa" class="col-xs-6 col-xs-offset-6"  style="display:none;">
-			<p><a href="#" class="click" onclick="modembands5gsa();">pasma 5G SA</a></p>
+			<p><a href="#" class="click" onclick="modembands5gsa(); return false;">pasma 5G SA</a></p>
 			</div>
 		</div>
 		<div id="div_modem_simslot" style="display:none;">
@@ -959,7 +959,7 @@
 
 	<h3 class="section">Monitor połączenia</h3>
 	<div class="alert alert-warning" id="watchdog_enabled_info">
-		<strong>UWAGA!</strong> Połączenie z internetem jest wyłączone. <a href="#" class="click" onclick="btn_pages('config');">Kliknij tutaj aby ustawić połączenie &rarr;</a>
+		<strong>UWAGA!</strong> Połączenie z internetem jest wyłączone. <a href="#" class="click" onclick="btn_pages('config'); return false;">Kliknij tutaj aby ustawić połączenie &rarr;</a>
 	</div>
 
 	<div class="row">
@@ -1834,8 +1834,8 @@
 			</div>
 		</div>
 		<div class="row space">
-			<div class="col-xs-6"><a href="#" class="click" onclick="hostblock_checkall();">zaznacz wszystko</a></div>
-			<div class="col-xs-6"><a href="#" class="click" onclick="hostblock_uncheckall();">odznacz wszystko</a></div>
+			<div class="col-xs-6"><a href="#" class="click" onclick="hostblock_checkall(); return false;">zaznacz wszystko</a></div>
+			<div class="col-xs-6"><a href="#" class="click" onclick="hostblock_uncheckall(); return false;">odznacz wszystko</a></div>
 		</div>
 
 		<h3 class="section"></h3>
@@ -2880,8 +2880,8 @@
 			</div>
 		</div>
 		<div class="row space">
-			<div class="col-xs-6"><a href="#" class="click" onclick="cron_checkall();">zaznacz wszystko</a></div>
-			<div class="col-xs-6"><a href="#" class="click" onclick="cron_uncheckall();">odznacz wszystko</a></div>
+			<div class="col-xs-6"><a href="#" class="click" onclick="cron_checkall(); return false;">zaznacz wszystko</a></div>
+			<div class="col-xs-6"><a href="#" class="click" onclick="cron_uncheckall(); return false;">odznacz wszystko</a></div>
 		</div>
 
 		<h3 class="section"></h3>

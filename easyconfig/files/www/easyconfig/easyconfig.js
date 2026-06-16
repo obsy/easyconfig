@@ -7895,13 +7895,13 @@ function shownetworks() {
 					if (sorted[idx].wlan_clients == 0) {
 						html += '<div class="col-xs-3">0</div>';
 					} else {
-						html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\');">' + sorted[idx].wlan_clients + ' &rarr;</a></div>';
+						html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\'); return false;">' + sorted[idx].wlan_clients + ' &rarr;</a></div>';
 					}
 				}
 				if (sorted[idx].lan_clients == 0) {
 					html += '<div class="col-xs-3">0</div>';
 				} else {
-					html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\');">' + sorted[idx].lan_clients + ' &rarr;</a></div>';
+					html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\'); return false;">' + sorted[idx].lan_clients + ' &rarr;</a></div>';
 				}
 				if (has_wireless) {
 					html += '<div class="col-xs-1"><span class="click" onclick="networkswifitoggle(\'' + sorted[idx].section + '\');"><span title="zmień stan Wi-Fi"><i data-feather="toggle"></i></span></div>';
