@@ -86,7 +86,7 @@ function easyconfig_onload() {
 
 	token = getCookie('easyconfig_token');
 	if (token.length == 32) {
-		ubus('"session", "list", {}', function(data) {
+		ubus('session', 'list', {}, function(data) {
 			if (data.error) {
 				token = inittoken;
 			} else {
@@ -131,11 +131,12 @@ function rgb2hex(rgb) {
 	return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
 }
 
-function escapeShell(value) {
-	value = value.replace(/\\/g, '\\\\\\\\');
-	value = value.replace(/\$/g, '\\\\$');
-	value = value.replace(/"/g, '\\\\\\"');
-	return value;
+function escapeShell(s) {
+	return String(s)
+		.replace(/\\/g, '\\\\')
+		.replace(/\$/g, '\\$')
+		.replace(/"/g, '\\"')
+		.replace(/`/g, '\\`');
 }
 
 function lz(n) {
@@ -631,8 +632,8 @@ function okdetectwan() {
 
 	if (data.proto == '3g' || data.proto == 'mbim' || data.proto == 'ncm' || data.proto == 'qmi' || data.proto == 'xmm') {
 		cmd.push('uci set network.wan.proto=' + data.proto);
-		cmd.push('uci set network.wan.device=\\\"' + data.device + '\\\"');
-		cmd.push('uci set network.wan.apn=\\\"' + data.apn + '\\\"');
+		cmd.push('uci set network.wan.device="' + data.device + '"');
+		cmd.push('uci set network.wan.apn="' + data.apn + '"');
 		cmd.push('uci set network.wan.pincode=' + data.pincode);
 	}
 	if (data.proto == 'dhcp' || data.proto == 'dhcp_rndis') {
@@ -661,14 +662,14 @@ function okdetectwan_pin() {
 		showMsg("Podany PIN nie jest odpowiednią wartością");
 	} else {
 		var pin = getValue('detectwan_pin');
-		ubus_call('"easyconfig", "pincode", {"proto":"' + getValue('detectwan_proto') + '","device":"' + getValue('detectwan_device') + '","pincode":"' + pin + '"}', function(data) {
+		ubus_call('easyconfig', 'pincode', { 'proto': getValue('detectwan_proto'), 'device': getValue('detectwan_device'), 'pincode': pin }, function(data) {
 			detectwan(pin);
 		});
 	}
 }
 
 function detectwan(pin) {
-	ubus_call('"easyconfig", "detect_wan", {}', function(data) {
+	ubus_call('easyconfig', 'detect_wan', {}, function(data) {
 		if (data.action) {
 			if (data.action == 'pinrequired') {
 				setValue('detectwan_proto', data.proto);
@@ -908,16 +909,26 @@ function showDialog(msg, default_value, primary_value, primary_callback) {
 var config;
 var modem = -1;
 var counter = 0;
-var token = "00000000000000000000000000000000";
+var token = '00000000000000000000000000000000';
 var expires;
 var timeout;
 
-var ubus = function(param, successHandler, errorHandler, showWait) {
+var ubus = function(path, method, message, successHandler, errorHandler, showWait) {
 	if (showWait) {
 		showMsg();
 	}
 	counter++;
-	param='{ "jsonrpc": "2.0", "id": '+counter+', "method": "call", "params": [ "'+token+'", '+param+' ] }';
+	var param = JSON.stringify({
+		'jsonrpc': '2.0',
+		'id': counter,
+		'method': 'call',
+		'params': [
+			token,
+			path,
+			method,
+			message
+		]
+	});
 
 	var xhr = typeof XMLHttpRequest != 'undefined'
 		? new XMLHttpRequest()
@@ -957,51 +968,46 @@ var ubus = function(param, successHandler, errorHandler, showWait) {
 function ubus_error(error) {
 	closeMsg();
 	if (error == -32002) {
-		document.getElementById("system_password").focus();
+		document.getElementById('system_password').focus();
 		location.reload();
 	} else {
 		showMsg("Błąd pobierania danych!", true);
 	}
 }
 
-function ubus_call(param, callback)
-{
-	ubus(param, function(data) {
+function ubus_call(path, method, message, callback) {
+	ubus(path, method, message, function(data) {
 		if (data.error) {
 			ubus_error(data.error.code);
 		} else {
 			if (data.result[0] === 0) {
-
 				if (expires) {
 					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById("system_password").focus(); location.reload(); }, timeout * 1000);
+					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
 				}
-
 				callback(data.result[1]);
 			} else {
 				showMsg("Błąd pobierania danych!", true);
 			}
 		}
 	}, function(status) {
-		showMsg("Błąd pobierania danych!", true);
+		showMsg('Błąd pobierania danych!', true);
 	}, true);
 }
 
-function ubus_call_noerror(param, callback) {
-	ubus(param, function(data) {
+function ubus_call_noerror(path, method, message, callback) {
+	ubus(path, method, message, function(data) {
 		if (data.error) {
 			ubus_error(data.error.code);
 		} else {
 			if (data.result[0] === 0) {
-
 				if (expires) {
 					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById("system_password").focus(); location.reload(); }, timeout * 1000);
+					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
 				}
-
 				callback(data.result[1]);
 			} else {
-				showMsg("Błąd pobierania danych!", true);
+				showMsg('Błąd pobierania danych!', true);
 			}
 		}
 	}, function(status) {
@@ -1010,17 +1016,15 @@ function ubus_call_noerror(param, callback) {
 	}, true);
 }
 
-function ubus_call_nomsg(param, callback) {
-	ubus(param, function(data) {
+function ubus_call_nomsg(path, method, message, callback) {
+	ubus(path, method, message, function(data) {
 		if (data.error) {
 		} else {
 			if (data.result[0] === 0) {
-
 				if (expires) {
 					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById("system_password").focus(); location.reload(); }, timeout * 1000);
+					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
 				}
-
 				callback(data.result[1]);
 			}
 		}
@@ -1029,13 +1033,13 @@ function ubus_call_nomsg(param, callback) {
 
 function execute(cmd, callback) {
 	cmd.unshift('#!/bin/sh');
-	cmd.push('rm -- \\\"$0\\\"');
+	cmd.push('rm -- "$0"');
 	cmd.push('exit 0');
 	cmd.push('');
 
 	var filename = '/tmp/' + getRandomString();
-	ubus_call('"file", "write", {"path":"' + filename + '","data":"' + cmd.join('\n') + '"}', function(data) {
-		ubus_call('"file", "exec", {"command":"sh", "params":["' + filename + '"]}', function(data1) {
+	ubus_call('file', 'write', { 'path': filename, 'data': cmd.join('\n') }, function(data) {
+		ubus_call('file', 'exec', { 'command': 'sh', 'params': [ filename ] }, function(data1) {
 			callback();
 		});
 	});
@@ -1047,7 +1051,7 @@ function login() {
 	var system_user = getValue('system_login');
 	var system_pass = getValue('system_password');
 
-	ubus('"session", "login", { "username": "' + system_user + '", "password": "' + (system_pass).replace(/\\/g, '\\\\').replace(/"/g,'\\\"') + '" }', function(data) {
+	ubus('session', 'login', { 'username': system_user, 'password': system_pass }, function(data) {
 		if (data.error) {
 			ubus_error(data.error.code);
 		} else {
@@ -1114,7 +1118,7 @@ function loginok(session, showlastpage) {
 }
 
 function logout() {
-	ubus('"session", "destroy", {}', function(data) {
+	ubus('session', 'destroy', {}, function(data) {
 		setCookie('easyconfig_token', '', 1);
 		setCookie('easyconfig_page', '', 1);
 		if (expires) { clearTimeout(expires); }
@@ -1213,7 +1217,7 @@ function setEncryption(element, encryption) {
 }
 
 function showconfig() {
-	ubus_call('"easyconfig", "config", {}', function(data) {
+	ubus_call('easyconfig', 'config', {}, function(data) {
 		config = data;
 
 		setDisplay('menu_networks', config.devicesection);
@@ -1600,7 +1604,7 @@ function saveconfig() {
 			}
 			if (config.cidrnotation) {
 				cmd.push('uci -q del network.wan.ipaddr');
-				cmd.push('uci add_list network.wan.ipaddr=\\\"' + getValue('wan_ipaddr') + '/'+ maskToCidr(getValue('wan_netmask')) + '\\\"');
+				cmd.push('uci add_list network.wan.ipaddr="' + getValue('wan_ipaddr') + '/' + maskToCidr(getValue('wan_netmask')) + '"');
 			} else {
 				cmd.push('uci set network.wan.ipaddr=' + getValue('wan_ipaddr'));
 				cmd.push('uci set network.wan.netmask=' + getValue('wan_netmask'));
@@ -1615,8 +1619,8 @@ function saveconfig() {
 			} else {
 				cmd.push('uci set network.wan.ifname=' + config.wan_ifname_default);
 			}
-			cmd.push('uci set network.wan.username=\\\"' + escapeShell(getValue('wan_username')) + '\\\"');
-			cmd.push('uci set network.wan.password=\\\"' + escapeShell(getValue('wan_password')) + '\\\"');
+			cmd.push('uci set network.wan.username="' + escapeShell(getValue('wan_username')) + '"');
+			cmd.push('uci set network.wan.password="' + escapeShell(getValue('wan_password')) + '"');
 			var lcpef = getValue('wan_lcpef');
 			if (validateNumericRange(lcpef, 0, 999) > 1) {
 				showMsg('Błąd w polu ' + getLabelText('wan_lcpef'), true);
@@ -1628,23 +1632,23 @@ function saveconfig() {
 				return;
 			}
 			if (lcpef && lcpei) {
-				cmd.push('uci set network.wan.keepalive=\\\"' + lcpef + ' ' + lcpei + '\\\"');
+				cmd.push('uci set network.wan.keepalive="' + lcpef + ' ' + lcpei + '"');
 			}
 			use_wanport = false;
 		}
 		if (wan_type == '3g' || wan_type == 'mbim' || wan_type == 'modemmanager' || wan_type == 'ncm' || wan_type == 'qmi' || wan_type == 'xmm') {
-			cmd.push('uci set network.wan.apn=\\\"' + getValue('wan_apn') + '\\\"');
-			cmd.push('uci set network.wan.device=\\\"' + getValue('wan_device' + (wan_type == 'modemmanager' ? '_mm' : '')) + '\\\"');
+			cmd.push('uci set network.wan.apn="' + getValue('wan_apn') + '"');
+			cmd.push('uci set network.wan.device="' + getValue('wan_device' + (wan_type == 'modemmanager' ? '_mm' : '')) + '"');
 			cmd.push('uci set network.wan.pincode=' + getValue('wan_pincode'));
 		}
 		if (wan_type == '3g') {
-			cmd.push('uci set network.wan.service=\\\"' + getValue('wan_modem_mode') + '\\\"');
+			cmd.push('uci set network.wan.service="' + getValue('wan_modem_mode') + '"');
 		}
 		if (wan_type == 'ncm') {
-			cmd.push('uci set network.wan.mode=\\\"' + getValue('wan_modem_mode') + '\\\"');
+			cmd.push('uci set network.wan.mode="' + getValue('wan_modem_mode') + '"');
 		}
 		if (wan_type == 'qmi') {
-			cmd.push('uci set network.wan.modes=\\\"' + getValue('wan_modem_mode') + '\\\"');
+			cmd.push('uci set network.wan.modes="' + getValue('wan_modem_mode') + '"');
 			if (config.wan_proto != wan_type || config.wan_device != getValue('wan_device') || config.wan_apn != getValue('wan_apn')) {
 				cmd.push('rm /var/state/easyconfig_modem 2>/dev/null');
 				cmd.push('easyconfig_setapn.sh');
@@ -1679,7 +1683,7 @@ function saveconfig() {
 						wan_macaddr_section = '@device[-1]';
 						cmd.push('uci set network.' + wan_macaddr_section + '.name=' + config.wan_ifname_default);
 					}
-					cmd.push('uci set network.' + wan_macaddr_section + '.macaddr=\\\"' + config.wan_macaddr.orig + '\\\"');
+					cmd.push('uci set network.' + wan_macaddr_section + '.macaddr="' + config.wan_macaddr.orig + '"');
 				} else {
 					if (config.wan_macaddr.section != '') {
 						cmd.push('uci -q del network.' + wan_macaddr_section + '.macaddr');
@@ -1691,7 +1695,7 @@ function saveconfig() {
 					wan_macaddr_section = '@device[-1]';
 					cmd.push('uci set network.' + wan_macaddr_section + '.name=' + config.wan_ifname_default);
 				}
-				cmd.push('uci set network.' + wan_macaddr_section + '.macaddr=\\\"' + getValue('wan_macaddr') + '\\\"');
+				cmd.push('uci set network.' + wan_macaddr_section + '.macaddr="' + getValue('wan_macaddr') + '"');
 			}
 		}
 
@@ -1735,9 +1739,9 @@ function saveconfig() {
 			} else {
 				cmd.push('T=$(uci -q get network.lan.ifname | sed \'s|' + config.wan_ifname_default + '||\' | xargs)');
 				if (use_wanport && getValue('wan_waninlan')) {
-					cmd.push('uci set network.lan.ifname=\\\"$T ' + config.wan_ifname_default + '\\\"');
+					cmd.push('uci set network.lan.ifname="$T ' + config.wan_ifname_default + '"');
 				} else {
-					cmd.push('uci set network.lan.ifname=\\\"$T\\\"');
+					cmd.push('uci set network.lan.ifname="$T"');
 				}
 			}
 		}
@@ -1772,9 +1776,9 @@ function saveconfig() {
 			var t = [];
 			if (use_dns == 'stubby') {
 				t.push('127.0.0.1');
-				cmd.push('IP=$(uci -q -d, get stubby.global.listen_address | awk -F, \'{for(i=1;i<=NF;i++)if($i~/.*\\\\..*\\\\..*\\\\..*@/){gsub(\\\"@\\\", \\\"#\\\"); print $i; break}}\')');
-				cmd.push('if [ -n \\\"$IP\\\" ]; then');
-				cmd.push(' uci add_list dhcp.@dnsmasq[0].server=\\\"$IP\\\"');
+				cmd.push('IP=$(uci -q -d, get stubby.global.listen_address | awk -F, \'{for(i=1;i<=NF;i++)if($i~/.*\\..*\\..*\\..*@/){gsub("@", "#"); print $i; break}}\')');
+				cmd.push('if [ -n "$IP" ]; then');
+				cmd.push(' uci add_list dhcp.@dnsmasq[0].server="$IP"');
 				cmd.push(' /etc/init.d/stubby enable');
 				cmd.push(' /etc/init.d/stubby start');
 				cmd.push(' uci set dhcp.@dnsmasq[0].noresolv=1');
@@ -1792,7 +1796,7 @@ function saveconfig() {
 			if (t.length > 0) {
 				cmd.push('uci set network.wan.peerdns=0');
 				t.forEach(function(address) {
-					cmd.push('uci add_list network.wan.dns=\\\"' + address + '\\\"');
+					cmd.push('uci add_list network.wan.dns="' + address + '"');
 				});
 			}
 		}
@@ -1829,7 +1833,7 @@ function saveconfig() {
 	}
 	if (config.cidrnotation) {
 		cmd.push('uci -q del network.lan.ipaddr');
-		cmd.push('uci add_list network.lan.ipaddr=\\\"' + getValue('lan_ipaddr') + '/' + maskToCidr(config.lan_netmask) + '\\\"');
+		cmd.push('uci add_list network.lan.ipaddr="' + getValue('lan_ipaddr') + '/' + maskToCidr(config.lan_netmask) + '"');
 	} else {
 		cmd.push('uci set network.lan.ipaddr=' + getValue('lan_ipaddr'));
 		cmd.push('uci set network.lan.netmask=' + config.lan_netmask);
@@ -1843,9 +1847,9 @@ function saveconfig() {
 
 	if (getValue('lan_forcedns')) {
 		cmd.push('uci set firewall.dns_53_redirect=redirect');
-		cmd.push('uci set firewall.dns_53_redirect.name=\\\"Adblock DNS, port 53\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.name="Adblock DNS, port 53"');
 		cmd.push('uci set firewall.dns_53_redirect.src=lan');
-		cmd.push('uci set firewall.dns_53_redirect.proto=\\\"tcp udp\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.proto="tcp udp"');
 		cmd.push('uci set firewall.dns_53_redirect.src_dport=53');
 		cmd.push('uci set firewall.dns_53_redirect.dest_port=53');
 		cmd.push('uci set firewall.dns_53_redirect.target=DNAT');
@@ -1928,12 +1932,12 @@ function saveconfig() {
 		if (config[radios[i]].wlan_ssid != wlan_ssid) {
 			wlan_restart_required = true;
 		}
-		cmd.push('uci set wireless.' + section + '.ssid=\\\"' + escapeShell(wlan_ssid) + '\\\"');
+		cmd.push('uci set wireless.' + section + '.ssid="' + escapeShell(wlan_ssid) + '"');
 		wlan_encryption = getValue('wlan_encryption_' + i);
 		if (config[radios[i]].wlan_encryption != wlan_encryption) {
 			wlan_restart_required = true;
 		}
-		cmd.push('uci set wireless.' + section + '.encryption=\\\"'+wlan_encryption+'\\\"');
+		cmd.push('uci set wireless.' + section + '.encryption="' + wlan_encryption + '"');
 		wlan_key = getValue('wlan_key_' + i);
 		if (wlan_encryption != 'none') {
 			if (wlan_key.length < 8) {
@@ -1944,7 +1948,7 @@ function saveconfig() {
 		if (config[radios[i]].wlan_key != wlan_key) {
 			wlan_restart_required = true;
 		}
-		cmd.push('uci set wireless.' + section + '.key=\\\"' + escapeShell(wlan_key) + '\\\"');
+		cmd.push('uci set wireless.' + section + '.key="' + escapeShell(wlan_key) + '"');
 
 		if (getValue('wlan_isolate_' + i)) {
 			if (config[radios[i]].wlan_isolate == 0) {
@@ -1991,10 +1995,10 @@ function saveconfig() {
 	}
 
 	// system
-	system_hostname=getValue('system_hostname');
-	if (checkField('system_hostname', validateHost)) {return;}
+	var system_hostname = getValue('system_hostname');
+	if (checkField('system_hostname', validateHost)) { return; }
 
-	cmd.push('uci set system.@system[0].hostname=\\\"'+system_hostname+'\\\"');
+	cmd.push('uci set system.@system[0].hostname="' + system_hostname + '"');
 	setValue('system_hostname_label', system_hostname);
 	document.title = system_hostname;
 
@@ -2016,7 +2020,7 @@ function saveconfig() {
 	if (config.button.code != '') {
 		var action = getValue('system_button');
 		if (config.button.action != action) {
-			cmd.push('rm /etc/rc.button/' + config.button.code + '>/dev/null');
+			cmd.push('rm /etc/rc.button/' + config.button.code + ' >/dev/null');
 			cmd.push('[ -e /usr/share/easyconfig/rc.button/' + action + ' ] && ln -s /usr/share/easyconfig/rc.button/' + action + ' /etc/rc.button/' + config.button.code);
 		}
 	}
@@ -2056,7 +2060,7 @@ function saveconfig() {
 			showMsg('Hasła nie są takie same!', true);
 			return;
 		}
-		cmd.push('(echo \\\"' + escapeShell(pass1) + '\\\"; sleep 1; echo \\\"' + escapeShell(pass1) + '\\\") | passwd root');
+		cmd.push('(echo "' + escapeShell(pass1) + '"; sleep 1; echo "' + escapeShell(pass1) + '") | passwd root');
 	}
 
 	execute(cmd, function(){
@@ -2175,13 +2179,19 @@ function showbandwidth(mac, section) {
 				}
 				return;
 			}
-			var source = '';
+			var path = null;
+			var method = null;
+			var message = null;
 			if (mac == '') {
-				source = '"network.device", "status", {"name":"' + config.wan_ifname + '"}';
+				path = 'network.device'
+				method = 'status'
+				message = { 'name': config.wan_ifname };
 			} else {
-				source = '"easyconfig", "clientbandwidth", {"mac":"' + mac + '", "section":"' + section + '"}';
+				path = 'easyconfig';
+				method = 'clientbandwidth';
+				message = { 'mac': mac, 'section': section };
 			}
-			ubus_call_nomsg(source, function(data) {
+			ubus_call_nomsg(path, method, message, function(data) {
 				var tx = 0;
 				var rx = 0;
 				if (mac == '') {
@@ -2232,7 +2242,7 @@ function portLabel(port) {
 }
 
 function showstatus() {
-	ubus_call('"easyconfig", "status", {}', function(data) {
+	ubus_call('easyconfig', 'status', {}, function(data) {
 		simslot = data.simslot;
 		setValue('system_uptime', formatDuration(data.system_uptime, false));
 		setValue('system_uptime_since', ' (od ' + getDateTimeSince(data.system_uptime) + ')');
@@ -2323,7 +2333,7 @@ function showstatus() {
 					break;
 			}
 
-			ubus_call('"mwan3", "status", {}', function(data1) {
+			ubus_call('mwan3', 'status', {}, function(data1) {
 				var interfaces = new Object();
 				for (var policy in data1.policies.ipv4) {
 					if (data.mwan3_use_policy == policy) {
@@ -2413,7 +2423,7 @@ function networkspeed(speed) {
 }
 
 function showsystem() {
-	ubus_call('"easyconfig", "system", {}', function(data) {
+	ubus_call('easyconfig', 'system', {}, function(data) {
 		setValue('firmware_version', data.version);
 		setValue('gui_version', data.gui_version);
 		setValue('model', data.model == '' ? '-' : data.model);
@@ -2437,7 +2447,7 @@ function showsystem() {
 
 function showmodeminfo() {
 	if (modem == 0) { return; }
-	ubus_call('"easyconfig", "modeminfo", {}', function(data) {
+	ubus_call('easyconfig', 'modeminfo', {}, function(data) {
 		setValue('modem_vendor', data.vendor ? data.vendor : '-');
 		setValue('modem_model', data.product ? data.product : '-');
 		setValue('modem_revision', data.revision ? data.revision : '-');
@@ -2481,7 +2491,7 @@ function savemodemsettings() {
 }
 
 function modemsettings() {
-	ubus_call('"easyconfig", "modemsettings", {}', function(data) {
+	ubus_call('easyconfig', 'modemsettings', {}, function(data) {
 		setValue('modemsettings_modem_device', data.modem_device);
 		setValue('modemsettings_modem_force_qmi', data.modem_force_qmi == 1);
 		setValue('modemsettings_modem_force_plmn', data.modem_force_plmn == 1);
@@ -2508,22 +2518,22 @@ function sendmodemat() {
 		document.getElementById('modemat_cmd').focus();
 		return;
 	}
-	atcmd = atcmd.replace(/\$/g, '\\\\\$');
-	atcmd = atcmd.replace(/\^/g, '\\\\\^');
-	atcmd = atcmd.replace(/"/g, '\\\\\\\"');
+	atcmd = atcmd.replace(/\$/g, '\\$');
+	atcmd = atcmd.replace(/\^/g, '\\^');
+	atcmd = atcmd.replace(/"/g, '\\"');
 
 	var cmd = [];
 	cmd.push('#!/bin/sh');
 	cmd.push('MODEM=$(/usr/share/easyconfig/modem/detect.sh)');
-	cmd.push('ATLOCK=\\\"flock -x /tmp/at_cmd_lock\\\"');
-	cmd.push('$ATLOCK chat -t 3 -e ABORT \\\"ERROR\\\" \'\' \\\"' + atcmd + '\\\" OK >> $MODEM < $MODEM');
+	cmd.push('ATLOCK="flock -x /tmp/at_cmd_lock"');
+	cmd.push('$ATLOCK chat -t 3 -e ABORT "ERROR" \'\' "' + atcmd + '" OK >> $MODEM < $MODEM');
 	cmd.push('RET=$?');
-	cmd.push('rm -- \\\"$0\\\"');
+	cmd.push('rm -- "$0"');
 	cmd.push('exit $RET');
 	cmd.push('');
 	var filename = '/tmp/' + getRandomString();
-	ubus_call('"file", "write", {"path":"' + filename + '","data":"' + cmd.join('\n') + '"}', function(data) {
-		ubus_call('"file", "exec", {"command":"sh", "params":["' + filename + '"]}', function(data1) {
+	ubus_call('file', 'write', { 'path': filename, 'data': cmd.join('\n') }, function(data) {
+		ubus_call('file', 'exec', { 'command': 'sh', 'params': [ filename ] }, function(data1) {
 			if (!data1.stderr) {
 				if (data1.code == 3) {
 					data1.stderr = 'Przekroczono czas oczekiwania na odpowiedź z modemu';
@@ -2543,7 +2553,7 @@ function closemodemat() {
 
 function modembands4g() {
 	closemodembands4g();
-	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
+	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
 			if (modem.error) {
@@ -2587,7 +2597,7 @@ function savemodembands4g() {
 	}
 
 	var cmd = [];
-	cmd.push('modemband.sh setbands \\\"' + bands + '\\\"');
+	cmd.push('modemband.sh setbands "' + bands + '"');
 	execute(cmd, modembands4g);
 }
 
@@ -2602,7 +2612,7 @@ function closemodembands4g() {
 
 function modembands5gnsa() {
 	closemodembands5gnsa();
-	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
+	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
 			if (modem.error || (modem.supported5gnsa).length == 0) {
@@ -2646,7 +2656,7 @@ function savemodembands5gnsa() {
 	}
 
 	var cmd = [];
-	cmd.push('modemband.sh setbands5gnsa \\\"' + bands + '\\\"');
+	cmd.push('modemband.sh setbands5gnsa "' + bands + '"');
 	execute(cmd, modembands5gnsa);
 }
 
@@ -2661,7 +2671,7 @@ function closemodembands5gnsa() {
 
 function modembands5gsa() {
 	closemodembands5gsa();
-	ubus_call('"file", "exec", {"command":"modemband.sh","params":["json"]}', function(data) {
+	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
 			var modem = JSON.parse(data.stdout);
 			if (modem.error || (modem.supported5gsa).length == 0) {
@@ -2705,7 +2715,7 @@ function savemodembands5gsa() {
 	}
 
 	var cmd = [];
-	cmd.push('modemband.sh setbands5gsa \\\"' + bands + '\\\"');
+	cmd.push('modemband.sh setbands5gsa "' + bands + '"');
 	execute(cmd, modembands5gsa);
 }
 
@@ -2723,7 +2733,7 @@ function modem_simslot_save() {
 }
 
 function oksimslotchange() {
-	ubus_call('"easyconfig", "setsimslot", {"slot":"' + getValue('modem_simslot') + '"}', function(data) {
+	ubus_call('easyconfig', 'setsimslot', { 'slot': getValue('modem_simslot') }, function(data) {
 		showsystem();
 	});
 }
@@ -2749,7 +2759,7 @@ var arrmodemaddon = [];
 
 function showmodem() {
 	if (modem == 0) { return; }
-	ubus_call('"easyconfig", "modem", {}', function(data) {
+	ubus_call('easyconfig', 'modem', {}, function(data) {
 		if (data.error)
 			return;
 
@@ -3286,13 +3296,13 @@ function btn_system_reboot() {
 }
 
 function okreboot() {
-	ubus('"easyconfig", "reboot", {}', function(data) {
-		token = "00000000000000000000000000000000";
+	ubus('easyconfig', 'reboot', {}, function(data) {
+		token = '00000000000000000000000000000000';
 		setCookie('easyconfig_token', '', 1);
 		setCookie('easyconfig_page', '', 1);
-		showMsg("Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...", false);
+		showMsg('Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...', false);
 	}, function(status) {
-		showMsg("Błąd pobierania danych!", true);
+		showMsg('Błąd pobierania danych!', true);
 	}, true);
 }
 
@@ -3301,13 +3311,13 @@ function btn_system_firstboot() {
 }
 
 function okfirstboot() {
-	ubus('"file", "exec", {"command":"firstboot","params":["-r", "-y"]}', function(data) {
-		token = "00000000000000000000000000000000";
+	ubus('file', 'exec', { 'command': 'firstboot', 'params': [ '-r', '-y' ] }, function(data) {
+		token = '00000000000000000000000000000000';
 		setCookie('easyconfig_token', '', 1);
 		setCookie('easyconfig_page', '', 1);
-		showMsg("Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...", false);
+		showMsg('Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...', false);
 	}, function(status) {
-		showMsg("Błąd pobierania danych!", true);
+		showMsg('Błąd pobierania danych!', true);
 	}, true);
 }
 
@@ -3316,7 +3326,7 @@ function okfirstboot() {
 function showwatchdog() {
 	setDisplay('watchdog_enabled_info', (config.wan_proto == 'none'));
 
-	ubus_call('"easyconfig", "watchdog", {}', function(data) {
+	ubus_call('easyconfig', 'watchdog', {}, function(data) {
 		setValue('watchdog_enabled', data.watchdog_enabled);
 		setValue('watchdog_dest', data.watchdog_dest);
 		setValue('watchdog_period', data.watchdog_period);
@@ -3360,9 +3370,9 @@ function savewatchdog() {
 
 	var cmd = [];
 	cmd.push('touch /etc/crontabs/root');
-	cmd.push('sed -i \\\"/easyconfig_watchdog/d\\\" /etc/crontabs/root');
+	cmd.push('sed -i "/easyconfig_watchdog/d" /etc/crontabs/root');
 	if (watchdog_enabled) {
-		cmd.push('echo \\\"*/' + watchdog_period + ' * * * * /usr/bin/easyconfig_watchdog.sh ' + (watchdog_delay * 60) + ' 3 ' + watchdog_dest + ' ' + watchdog_period_count + ' ' + watchdog_action + '\\\" >> /etc/crontabs/root');
+		cmd.push('echo "*/' + watchdog_period + ' * * * * /usr/bin/easyconfig_watchdog.sh ' + (watchdog_delay * 60) + ' 3 ' + watchdog_dest + ' ' + watchdog_period_count + ' ' + watchdog_action + '" >> /etc/crontabs/root');
 	}
 	cmd.push('/etc/init.d/cron restart');
 	cmd.push('uci set easyconfig.watchdog=service');
@@ -3423,7 +3433,7 @@ function showsitesurvey() {
 		setValue('div_sitesurvey_content', '<div class="alert alert-warning">Brak sieci bezprzewodowych lub Wi-Fi jest wyłączone</div>');
 	} else {
 		for (var idx = 0; idx < n; idx++) {
-			ubus_call('"easyconfig", "wifiscan", {"interface":"' + config.wlan_current_channels[idx].interface + '"}', showsitesurvey_praser);
+			ubus_call('easyconfig', 'wifiscan', { 'interface': config.wlan_current_channels[idx].interface }, showsitesurvey_praser);
 		}
 	}
 }
@@ -4065,7 +4075,7 @@ var remote_clients;
 var remote_hosts;
 
 function showclients() {
-	ubus_call('"easyconfig", "clients", {}', function(data) {
+	ubus_call('easyconfig', 'clients', {}, function(data) {
 
 		if ((data.ports).length > 0) {
 			for (var idx = 0, n = (data.ports_swconfig).length; idx < n; idx++) {
@@ -4473,7 +4483,7 @@ var logs;
 var logs_hosts = [];
 
 function showclientslogs() {
-	ubus_call('"easyconfig", "clientslogs", {}', function(data) {
+	ubus_call('easyconfig', 'clientslogs', {}, function(data) {
 		logs = sortJSON(data.result, 'id', 'desc');
 
 		var lookup = {};
@@ -4786,7 +4796,7 @@ function okhostblock() {
 		cmd.push('uci set firewall.m' + nmac + '.target=REJECT');
 		cmd.push('uci set firewall.m' + nmac + '.proto=all');
 		cmd.push('uci set firewall.m' + nmac + '.family=any');
-		cmd.push('uci set firewall.m' + nmac + '.name=\\\"' + name + '\\\"');
+		cmd.push('uci set firewall.m' + nmac + '.name="' + name + '"');
 	}
 	if (action == 2) {
 		var bc = document.getElementById('hostblock_off').style.backgroundColor;
@@ -4857,7 +4867,7 @@ function savehostname() {
 	var cmd = [];
 	cmd.push('uci -q del easyconfig.m' + nmac);
 	cmd.push('uci set easyconfig.m' + nmac + '=mac');
-	cmd.push('uci set easyconfig.m' + nmac + '.name=\\\"' + escapeShell(name) +'\\\"');
+	cmd.push('uci set easyconfig.m' + nmac + '.name="' + escapeShell(name) + '"');
 	cmd.push('uci commit easyconfig');
 
 	execute(cmd, showclients);
@@ -4939,13 +4949,13 @@ function savehostip() {
 	}
 
 	if (getValue('hostip_disconnect')) {
-		cmd.push('MAC=\\\"' + mac + '\\\"');
+		cmd.push('MAC="' + mac + '"');
 		cmd.push('T=$(ubus list hostapd.*)');
 		cmd.push('for T1 in $T; do');
 		cmd.push('	T2=$(ubus call $T1 get_clients | grep $MAC)');
-		cmd.push('	if [ -n \\\"$T2\\\" ]; then');
-		cmd.push('		ubus call $T1 del_client \\\"{\'addr\':\'$MAC\',\'reason\':5,\'deauth\':false,\'ban_time\':0}\\\"');
-		cmd.push('		rm -- \\\"$0\\\"');
+		cmd.push('	if [ -n "$T2" ]; then');
+		cmd.push('		ubus call $T1 del_client "{\'addr\':\'$MAC\',\'reason\':5,\'deauth\':false,\'ban_time\':0}"');
+		cmd.push('		rm -- "$0"');
 		cmd.push('		exit 0');
 		cmd.push('	fi');
 		cmd.push('done');
@@ -5055,7 +5065,7 @@ function hoststatistics(id, type, limit) {
 }
 
 function hoststatisticsmodal(mac, title, type, limit) {
-	ubus_call('"easyconfig", "clientstatistics", {"mac":"' + mac + '"}', function(data) {
+	ubus_call('easyconfig', 'clientstatistics', { 'mac': mac }, function(data) {
 		var html = title + '<hr>';
 		if ((data.statistics).length == 0) {
 			html += 'Brak danych';
@@ -5168,7 +5178,7 @@ var queries;
 var queries_hosts = [];
 
 function showqueries() {
-	ubus_call('"easyconfig", "queries", {}', function(data) {
+	ubus_call('easyconfig', 'queries', {}, function(data) {
 		queries = data.result;
 
 		var lookup = {};
@@ -5394,7 +5404,7 @@ function formatDateWithoutDay(d) {
 }
 
 function showtraffic() {
-	ubus_call('"easyconfig", "traffic", {}', function(data) {
+	ubus_call('easyconfig', 'traffic', {}, function(data) {
 		setValue('traffic_cycle_type', data.traffic_cycle_type);
 		setValue('traffic_cyclem', data.traffic_cyclem);
 		if (data.traffic_cyclep.length == 8) {
@@ -5420,7 +5430,7 @@ function showtraffic() {
 			if (data.traffic_warning_unit == 't') { traffic_warning_limit *= 1024*1024*1024*1024; }
 		}
 
-		ubus_call('"easyconfig", "clientstatistics", {"mac":"wan"}', function(data1) {
+		ubus_call('easyconfig', 'clientstatistics', { 'mac': 'wan' }, function(data1) {
 			var today = new Array(formatDate(new Date));
 			var yesterday = lastDays(1);
 			var last7d = lastDays(7);
@@ -5662,19 +5672,19 @@ function okremovetraffic() {
 	cmd.push('DB=/tmp/easyconfig_statistics.json');
 	cmd.push('SDB=/usr/lib/easyconfig/easyconfig_statistics.json.gz');
 	cmd.push('. /usr/share/libubox/jshn.sh');
-	cmd.push('if [ -e \\\"$DB\\\" ]; then');
-	cmd.push('lock \\\"/var/lock/easyconfig_statistics.lock\\\"');
-	cmd.push('if [ -e \\\"/usr/bin/easyconfig_statistics.uc\\\" ]; then');
-	cmd.push('/usr/bin/easyconfig_statistics.uc \\\"' + mac + '\\\" \\\"delete\\\" 0 0 0 \\\"\\\" 0');
+	cmd.push('if [ -e "$DB" ]; then');
+	cmd.push('lock "/var/lock/easyconfig_statistics.lock"');
+	cmd.push('if [ -e "/usr/bin/easyconfig_statistics.uc" ]; then');
+	cmd.push('/usr/bin/easyconfig_statistics.uc "' + mac + '" "delete" 0 0 0 "" 0');
 	cmd.push('else');
 	cmd.push('json_init');
-	cmd.push('json_load_file \\\"$DB\\\"');
-	cmd.push('export K_J_V=$(echo \\\"${K_J_V}\\\" | sed \'s/ ' + mac + '//g\')');
+	cmd.push('json_load_file "$DB"');
+	cmd.push('export K_J_V=$(echo "${K_J_V}" | sed \'s/ ' + mac + '//g\')');
 	cmd.push('json_close_object');
-	cmd.push('json_dump > \\\"$DB\\\"');
+	cmd.push('json_dump > "$DB"');
 	cmd.push('fi');
-	cmd.push('touch -d \\\"2000-01-01 00:00:00\\\" \\\"$SDB\\\"');
-	cmd.push('lock -u \\\"/var/lock/easyconfig_statistics.lock\\\"');
+	cmd.push('touch -d "2000-01-01 00:00:00" "$SDB"');
+	cmd.push('lock -u "/var/lock/easyconfig_statistics.lock"');
 	cmd.push('/usr/bin/easyconfig_statistics.sh');
 	cmd.push('fi');
 
@@ -5728,7 +5738,7 @@ function sendussd() {
 	if (checkField('ussd_code', validateussd)) {return;}
 	var ussd = getValue("ussd_code");
 
-	ubus_call('"easyconfig", "ussd", {"code":"' + ussd + '"}', function(data) {
+	ubus_call('easyconfig', 'ussd', { 'code': ussd }, function(data) {
 		if (data.response == "") {
 			showMsg("Brak odpowiedzi z modemu");
 		} else {
@@ -5746,7 +5756,7 @@ function sendsms() {
 
 	msg = removeDiacritics(msg);
 
-	ubus_call('"easyconfig", "sms", {"action":"send","arg1":"' + tnumber + '","arg2":"' + msg + '"}', function(data) {
+	ubus_call('easyconfig', 'sms', { 'action': 'send', 'arg1': tnumber, 'arg2': msg }, function(data) {
 		if ((data.response).match(/sms sent sucessfully/) == null) {
 			showMsg('Wystąpił problem z wysłaniem wiadomości');
 		} else {
@@ -5756,7 +5766,7 @@ function sendsms() {
 }
 
 function readsms() {
-	ubus_call('"easyconfig", "sms", {"action":"read","arg1":"","arg2":""}', function(data) {
+	ubus_call('easyconfig', 'sms', { 'action': 'read', 'arg1': '', 'arg2': '' }, function(data) {
 		var html = '';
 		var arr = data.msg;
 
@@ -5817,7 +5827,7 @@ function removesms(ids, sender, timestamp) {
 function okremovesms() {
 	var ids = getValue('dialog_val');
 
-	ubus_call('"easyconfig", "sms", {"action":"delete","arg1":"' + ids + '","arg2":""}', function(data) {
+	ubus_call('easyconfig', 'sms', { 'action': 'delete', 'arg1': ids, 'arg2': '' }, function(data) {
 		if ((data.response).match(/Deleted message/) == null) {
 			showMsg('Wystąpił problem z usunięciem wiadomości');
 		} else {
@@ -5847,7 +5857,7 @@ function proofreadSMSText(input) {
 }
 
 function readussdshortcuts() {
-	ubus_call('"easyconfig", "ussdshortcuts", {}', function(data) {
+	ubus_call('easyconfig', 'ussdshortcuts', {}, function(data) {
 		var arr = data.shortcuts;
 		if (arr.length > 0) {
 			setElementEnabled('ussd_shortcuts', true, false);
@@ -5878,7 +5888,7 @@ function selectussd(code) {
 /*****************************************************************************/
 
 function upgrade_step1() {
-	ubus_call('"easyconfig", "upgrade", {"step":"1"}', function(data) {
+	ubus_call('easyconfig', 'upgrade', { 'step': '1'}, function(data) {
 		var msg = "";
 		var e = document.getElementById("div_upgrade_msg");
 		removeClasses(e, ["alert-warning","alert-info"]);
@@ -5923,7 +5933,7 @@ function upgrade_step2() {
 	var url = getValue("upgrade_url");
 	var sha256sum = getValue("upgrade_sha256sum");
 
-	ubus_call('"easyconfig", "upgrade", {"step":"2", "arg1":"' + url + '","arg2":"' + sha256sum + '"}', function(data) {
+	ubus_call('easyconfig', 'upgrade', { 'step': '2', 'arg1': url, 'arg2': sha256sum }, function(data) {
 		var msg = "";
 		var e = document.getElementById("div_upgrade_msg");
 		removeClasses(e, ["alert-warning","alert-info"]);
@@ -5965,7 +5975,7 @@ function upgrade_step3() {
 	var sha256sum = getValue("upgrade_sha256sum");
 	var ps = getValue("upgrade_preserve_settings");
 
-	ubus_call_noerror('"easyconfig", "upgrade", {"step":"3", "arg1":"' + sha256sum + '","arg2":' + (ps?"true":"false") + '}', function(data) {
+	ubus_call_noerror('easyconfig', 'upgrade', { 'step': '3', 'arg1': sha256sum, 'arg2': (ps ? 'true': 'false') }, function(data) {
 		var msg = "";
 		var e = document.getElementById("div_upgrade_msg");
 		removeClasses(e, ["alert-warning","alert-info"]);
@@ -6008,7 +6018,7 @@ function upvpn(proto, interface, section) {
 		cmd.push('uci revert zerotier');
 		execute(cmd, showvpn);
 	} else {
-		ubus_call('"network.interface", "up", {"interface":"' + interface + '"}', function(data) {
+		ubus_call('network.interface', 'up', { 'interface': interface }, function(data) {
 			showvpn();
 		});
 	}
@@ -6028,8 +6038,8 @@ function downvpn(proto, interface, section) {
 		cmd.push('uci revert zerotier');
 		execute(cmd, showvpn);
 	} else {
-		ubus_call('"network.interface", "down", {"interface":"' + interface + '"}', function(data) {
-			ubus_call('"network.interface", "up", {"interface":"wan"}', function(data1) {
+		ubus_call('network.interface', 'down', { 'interface': interface }, function(data) {
+			ubus_call('network.interface', 'up', { 'interface': 'wan' }, function(data1) {
 				showvpn();
 			});
 		});
@@ -6056,7 +6066,7 @@ function savevpnkillswitch() {
 }
 
 function showvpn() {
-	ubus_call('"easyconfig", "vpn", {}', function(data) {
+	ubus_call('easyconfig', 'vpn', {}, function(data) {
 		setValue('vpn_killswitch', data.wan_lanto == '');
 		config.wan_lanto = data.wan_lanto;
 		var sorted = sortJSON(data.result, 'name', 'asc');
@@ -6106,7 +6116,7 @@ function showvpn() {
 }
 
 function vpnstatus(interface) {
-	ubus_call('"easyconfig", "vpnstatus", {"interface":"' + interface + '"}', function(data) {
+	ubus_call('easyconfig', 'vpnstatus', { 'interface': interface }, function(data) {
 		var html = '';
 		html += createRowForModal('Czas połączenia', formatDuration(data.uptime, false) + ' (od ' + getDateTimeSince(data.uptime) + ')');
 		html += createRowForModal('Wysłano', bytesToSize(data.tx));
@@ -6131,7 +6141,7 @@ function vpnstatus(interface) {
 }
 
 function vpnstatuszerotier(section) {
-	ubus_call('"easyconfig", "vpnstatuszerotier", {"section":"' + section + '"}', function(data) {
+	ubus_call('easyconfig', 'vpnstatuszerotier', { 'section': section }, function(data) {
 		var html = '';
 		html += createRowForModal('Adres IP', '<span class="click" onclick="showgeolocation();">' + (data.network.ipaddr ? data.network.ipaddr : '-') + '</span>');
 		html += createRowForModal('Sieć', data.network.id);
@@ -6143,7 +6153,7 @@ function vpnstatuszerotier(section) {
 }
 
 function vpndetails(proto, interface, section) {
-	ubus_call('"easyconfig", "vpndetails", {"proto":"' + proto + '","interface":"' + interface + '","section":"' + section + '"}', function(data) {
+	ubus_call('easyconfig', 'vpndetails', { 'proto': proto, 'interface': interface, 'section': section }, function(data) {
 		if (data.proto == 'openvpn') {
 			showError('vpn_openvpn_error', '', '');
 			setValue('vpn_openvpn_interface', interface);
@@ -6596,7 +6606,7 @@ function saveopenvpn() {
 		interface = getRandomString();
 	}
 
-	ubus_call('"file", "write", {"path":"/tmp/' + interface + '","data":"' + configtext.replace(/\\/g,'\\\\').replace(/"/g, '\\"') + '"}', function(data) {
+	ubus_call('file', 'write', { 'path': '/tmp/' + interface, 'data': configtext }, function(data) {
 	});
 
 	cmd.push('uci set network.' + interface + '=interface');
@@ -6608,15 +6618,15 @@ function saveopenvpn() {
 	}
 
 	cmd.push('uci set openvpn.' + section + '=openvpn');
-	cmd.push('uci set openvpn.' + section + '.name=\\\"' + escapeShell(getValue('vpn_openvpn_name')) + '\\\"');
-	cmd.push('uci set openvpn.' + section + '.username=\\\"' + escapeShell(getValue('vpn_openvpn_username')) + '\\\"');
-	cmd.push('uci set openvpn.' + section + '.password=\\\"' + escapeShell(getValue('vpn_openvpn_password')) + '\\\"');
+	cmd.push('uci set openvpn.' + section + '.name="' + escapeShell(getValue('vpn_openvpn_name')) + '"');
+	cmd.push('uci set openvpn.' + section + '.username="' + escapeShell(getValue('vpn_openvpn_username')) + '"');
+	cmd.push('uci set openvpn.' + section + '.password="' + escapeShell(getValue('vpn_openvpn_password')) + '"');
 	cmd.push('uci set openvpn.' + section + '.dev=' + interface);
 	cmd.push('uci set openvpn.' + section + '.dev_type=tun');
 	cmd.push('CFG=$(uci -q get openvpn.' + section + '.config)');
-	cmd.push('if [ ! -e \\\"$CFG\\\" ]; then');
+	cmd.push('if [ ! -e "$CFG" ]; then');
 	cmd.push(' mkdir -p /etc/openvpn/');
-	cmd.push(' CFG=\\\"/etc/openvpn/' + interface + '\\\"');
+	cmd.push(' CFG="/etc/openvpn/' + interface + '"');
 	cmd.push('fi');
 	cmd.push('uci set openvpn.' + section + '.config=$CFG');
 	cmd.push('cat /tmp/' + interface + ' > $CFG');
@@ -6629,7 +6639,7 @@ function saveopenvpn() {
 		cmd.push('uci set easyconfig.vpn.interface=' + interface);
 	} else {
 		cmd.push('T=$(uci -q get easyconfig.vpn.interface)');
-		cmd.push('if [ \\\"x$T\\\" = \\\"x' + interface + '\\\" ]; then');
+		cmd.push('if [ "x$T" = "x' + interface + '" ]; then');
 		cmd.push(' uci -q del easyconfig.vpn.interface');
 		cmd.push('fi');
 	}
@@ -6699,14 +6709,14 @@ function savepptp() {
 	var interface = getValue('vpn_pptp_interface');
 	cmd.push('uci set network.' + interface + '=interface');
 	cmd.push('uci set network.' + interface + '.proto=pptp');
-	cmd.push('uci set network.' + interface + '.name=\\\"' + escapeShell(getValue('vpn_pptp_name')) + '\\\"');
-	cmd.push('uci set network.' + interface + '.server=\\\"' + getValue('vpn_pptp_server') + '\\\"');
-	cmd.push('uci set network.' + interface + '.username=\\\"' + escapeShell(getValue('vpn_pptp_username')) + '\\\"');
-	cmd.push('uci set network.' + interface + '.password=\\\"' + escapeShell(getValue('vpn_pptp_password')) + '\\\"');
+	cmd.push('uci set network.' + interface + '.name="' + escapeShell(getValue('vpn_pptp_name')) + '"');
+	cmd.push('uci set network.' + interface + '.server="' + getValue('vpn_pptp_server') + '"');
+	cmd.push('uci set network.' + interface + '.username="' + escapeShell(getValue('vpn_pptp_username')) + '"');
+	cmd.push('uci set network.' + interface + '.password="' + escapeShell(getValue('vpn_pptp_password')) + '"');
 	if (getValue('vpn_pptp_mppe')) {
 		cmd.push('uci -q del network.' + interface + '.pppd_options');
 	} else {
-		cmd.push('uci set network.' + interface + '.pppd_options=\\\"nomppe\\\"');
+		cmd.push('uci set network.' + interface + '.pppd_options="nomppe"');
 	}
 
 	savevpnfirewall(cmd, interface, getValue('vpn_pptp_zone_input'), getValue('vpn_pptp_lanto'));
@@ -6716,7 +6726,7 @@ function savepptp() {
 		cmd.push('uci set easyconfig.vpn.interface=' + interface);
 	} else {
 		cmd.push('T=$(uci -q get easyconfig.vpn.interface)');
-		cmd.push('if [ \\\"x$T\\\" = \\\"x' + interface + '\\\" ]; then');
+		cmd.push('if [ "x$T" = "x' + interface + '" ]; then');
 		cmd.push(' uci -q del easyconfig.vpn.interface');
 		cmd.push('fi');
 	}
@@ -6776,10 +6786,10 @@ function savesstp() {
 	var interface = getValue('vpn_sstp_interface');
 	cmd.push('uci set network.' + interface + '=interface');
 	cmd.push('uci set network.' + interface + '.proto=sstp');
-	cmd.push('uci set network.' + interface + '.name=\\\"' + escapeShell(getValue('vpn_sstp_name')) + '\\\"');
-	cmd.push('uci set network.' + interface + '.server=\\\"' + getValue('vpn_sstp_server') + '\\\"');
-	cmd.push('uci set network.' + interface + '.username=\\\"' + escapeShell(getValue('vpn_sstp_username')) + '\\\"');
-	cmd.push('uci set network.' + interface + '.password=\\\"' + escapeShell(getValue('vpn_sstp_password')) + '\\\"');
+	cmd.push('uci set network.' + interface + '.name="' + escapeShell(getValue('vpn_sstp_name')) + '"');
+	cmd.push('uci set network.' + interface + '.server="' + getValue('vpn_sstp_server') + '"');
+	cmd.push('uci set network.' + interface + '.username="' + escapeShell(getValue('vpn_sstp_username')) + '"');
+	cmd.push('uci set network.' + interface + '.password="' + escapeShell(getValue('vpn_sstp_password')) + '"');
 
 	savevpnfirewall(cmd, interface, getValue('vpn_sstp_zone_input'), getValue('vpn_sstp_lanto'));
 
@@ -6788,7 +6798,7 @@ function savesstp() {
 		cmd.push('uci set easyconfig.vpn.interface=' + interface);
 	} else {
 		cmd.push('T=$(uci -q get easyconfig.vpn.interface)');
-		cmd.push('if [ \\\"x$T\\\" = \\\"x' + interface + '\\\" ]; then');
+		cmd.push('if [ "x$T" = "x' + interface + '" ]; then');
 		cmd.push(' uci -q del easyconfig.vpn.interface');
 		cmd.push('fi');
 	}
@@ -6821,7 +6831,7 @@ function savesstp() {
 }
 
 function addwireguardkeys(privkey) {
-	ubus_call('"easyconfig", "getwireguardkeys", {"privkey":"' + privkey + '"}', function(data) {
+	ubus_call('easyconfig', 'getwireguardkeys', { 'privkey': privkey }, function(data) {
 		setValue('vpn_wireguard_privkey', data.privkey);
 		setValue('vpn_wireguard_pubkey', data.pubkey);
 	});
@@ -6992,7 +7002,7 @@ function savewireguard() {
 	var interface = getValue('vpn_wireguard_interface');
 	cmd.push('uci set network.' + interface + '=interface');
 	cmd.push('uci set network.' + interface + '.proto=wireguard');
-	cmd.push('uci set network.' + interface + '.private_key=\\\"' + getValue('vpn_wireguard_privkey') + '\\\"');
+	cmd.push('uci set network.' + interface + '.private_key="' + getValue('vpn_wireguard_privkey') + '"');
 	var port = getValue('vpn_wireguard_port');
 	if (port != '') {
 		cmd.push('uci set network.' + interface + '.listen_port=' + port);
@@ -7011,7 +7021,7 @@ function savewireguard() {
 	for (var idx = 0; idx < cnt; idx++) {
 		e = document.getElementById('vpn_wireguard_ip_' + idx);
 		if (e) {
-			cmd.push('uci add_list network.' + interface + '.addresses=\\\"' + getValue('vpn_wireguard_ip_' + idx) + '/' + maskToCidr(getValue('vpn_wireguard_netmask_' + idx)) + '\\\"');
+			cmd.push('uci add_list network.' + interface + '.addresses="' + getValue('vpn_wireguard_ip_' + idx) + '/' + maskToCidr(getValue('vpn_wireguard_netmask_' + idx)) + '"');
 		}
 	}
 
@@ -7027,11 +7037,11 @@ function savewireguard() {
 		if (getValue('vpn_wireguard_enabled_' + idx) == false) {
 			cmd.push('uci set network.@wireguard_' + interface + '[-1].disabled=1');
 		}
-		cmd.push('uci set network.@wireguard_' + interface + '[-1].description=\\\"' + escapeShell(getValue('vpn_wireguard_description_' + idx)) + '\\\"');
-		cmd.push('uci set network.@wireguard_' + interface + '[-1].public_key=\\\"' + getValue('vpn_wireguard_pubkey_' + idx) + '\\\"');
-		cmd.push('uci set network.@wireguard_' + interface + '[-1].preshared_key=\\\"' + getValue('vpn_wireguard_pskey_' + idx) + '\\\"');
-		cmd.push('uci set network.@wireguard_' + interface + '[-1].endpoint_host=\\\"' + getValue('vpn_wireguard_endpoint_host_' + idx) + '\\\"');
-		cmd.push('uci set network.@wireguard_' + interface + '[-1].endpoint_port=\\\"' + getValue('vpn_wireguard_endpoint_port_' + idx) + '\\\"');
+		cmd.push('uci set network.@wireguard_' + interface + '[-1].description="' + escapeShell(getValue('vpn_wireguard_description_' + idx)) + '"');
+		cmd.push('uci set network.@wireguard_' + interface + '[-1].public_key="' + getValue('vpn_wireguard_pubkey_' + idx) + '"');
+		cmd.push('uci set network.@wireguard_' + interface + '[-1].preshared_key="' + getValue('vpn_wireguard_pskey_' + idx) + '"');
+		cmd.push('uci set network.@wireguard_' + interface + '[-1].endpoint_host="' + getValue('vpn_wireguard_endpoint_host_' + idx) + '"');
+		cmd.push('uci set network.@wireguard_' + interface + '[-1].endpoint_port="' + getValue('vpn_wireguard_endpoint_port_' + idx) + '"');
 		cmd.push('uci set network.@wireguard_' + interface + '[-1].persistent_keepalive=25');
 		cmd.push('uci set network.@wireguard_' + interface + '[-1].route_allowed_ips=1');
 
@@ -7039,7 +7049,7 @@ function savewireguard() {
 		for (var idy = 0; idy < cnt1; idy++) {
 			e = document.getElementById('vpn_wireguard_allowed_ip_' + idx + '_' + idy);
 			if (e) {
-				cmd.push('uci add_list network.@wireguard_' + interface + '[-1].allowed_ips=\\\"' + getValue('vpn_wireguard_allowed_ip_' + idx + '_' + idy) + '/' + maskToCidr(getValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy)) + '\\\"');
+				cmd.push('uci add_list network.@wireguard_' + interface + '[-1].allowed_ips="' + getValue('vpn_wireguard_allowed_ip_' + idx + '_' + idy) + '/' + maskToCidr(getValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy)) + '"');
 			}
 		}
 	}
@@ -7051,7 +7061,7 @@ function savewireguard() {
 		cmd.push('uci set easyconfig.vpn.interface=' + interface);
 	} else {
 		cmd.push('T=$(uci -q get easyconfig.vpn.interface)');
-		cmd.push('if [ \\\"x$T\\\" = \\\"x' + interface + '\\\" ]; then');
+		cmd.push('if [ "x$T" = "x' + interface + '" ]; then');
 		cmd.push(' uci -q del easyconfig.vpn.interface');
 		cmd.push('fi');
 	}
@@ -7098,7 +7108,7 @@ function okremovezerotier() {
 
 	cmd.push('uci -q del zerotier.' + getValue('dialog_val'));
 	cmd.push('T=$(uci show zerotier | awk \'/=network$/\' | wc -l)');
-	cmd.push('if [ \\\"$T\\\" = \\\"0\\\" ]; then');
+	cmd.push('if [ "$T" = "0" ]; then');
 	cmd.push(' uci set zerotier.global.enabled=0');
 	cmd.push(' uci -q del zerotier.global.secret');
 	cmd.push('fi');
@@ -7130,7 +7140,7 @@ function savezerotier() {
 	}
 
 	cmd.push('uci set zerotier.' + section + '=network');
-	cmd.push('uci set zerotier.' + section + '.name=\\\"' + escapeShell(getValue('vpn_zerotier_name')) + '\\\"');
+	cmd.push('uci set zerotier.' + section + '.name="' + escapeShell(getValue('vpn_zerotier_name')) + '"');
 	var ztnetwork = getValue('vpn_zerotier_network');
 	cmd.push('uci set zerotier.' + section + '.id=' + ztnetwork);
 	cmd.push('uci set zerotier.' + section + '.allow_managed=1');
@@ -7139,11 +7149,11 @@ function savezerotier() {
 	cmd.push('uci set zerotier.' + section + '.allow_dns=0');
 
 	cmd.push('uci set zerotier.global.copy_config_path=1');
-	cmd.push('uci set zerotier.global.config_path=\\\"/etc/zerotier\\\"');
+	cmd.push('uci set zerotier.global.config_path="/etc/zerotier"');
 	cmd.push('mkdir -p /etc/zerotier');
 	cmd.push('touch /etc/zerotier/devicemap');
-	cmd.push('sed -i \\\"/' + ztnetwork + '=zt/d\\\" /etc/zerotier/devicemap');
-	cmd.push('echo \\\"' + ztnetwork + '=zt' + interface + '\\\" >> /etc/zerotier/devicemap');
+	cmd.push('sed -i "/' + ztnetwork + '=zt/d" /etc/zerotier/devicemap');
+	cmd.push('echo "' + ztnetwork + '=zt' + interface + '" >> /etc/zerotier/devicemap');
 
 	cmd.push('uci set network.' + interface + '=interface');
 	cmd.push('uci set network.' + interface + '.proto=none');
@@ -7156,7 +7166,7 @@ function savezerotier() {
 		cmd.push('uci set easyconfig.vpn.interface=zerotier');
 	} else {
 		cmd.push('T=$(uci -q get easyconfig.vpn.interface)');
-		cmd.push('if [ \\\"x$T\\\" = \\\"xzerotier\\\" ]; then');
+		cmd.push('if [ "x$T" = "xzerotier" ]; then');
 		cmd.push(' uci -q del easyconfig.vpn.interface');
 		cmd.push('fi');
 	}
@@ -7220,7 +7230,7 @@ function savevpnfirewall(cmd, interface, inputpolicy, lanto) {
 /*****************************************************************************/
 
 function showgeolocation() {
-	ubus_call('"easyconfig", "geolocation", {}', function(data) {
+	ubus_call('easyconfig', 'geolocation', {}, function(data) {
 		if (data.status == 'success') {
 			var html = '';
 			html += createRowForModal('Twoje IP', (data.query ? data.query : '-'));
@@ -7240,7 +7250,7 @@ function showgeolocation() {
 var adblock_lists;
 
 function showadblock() {
-	ubus_call('"easyconfig", "adblock", {}', function(data) {
+	ubus_call('easyconfig', 'adblock', {}, function(data) {
 		if (config.services.adblock) {
 			document.getElementById('btn_adblock_checkdomain').style.display = 'inline-block';
 			setDisplay('div_adblock_adblock', true);
@@ -7340,9 +7350,9 @@ function saveadblock() {
 
 	if (getValue('adblock_forcedns')) {
 		cmd.push('uci set firewall.dns_53_redirect=redirect');
-		cmd.push('uci set firewall.dns_53_redirect.name=\\\"Adblock DNS, port 53\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.name="Adblock DNS, port 53"');
 		cmd.push('uci set firewall.dns_53_redirect.src=lan');
-		cmd.push('uci set firewall.dns_53_redirect.proto=\\\"tcp udp\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.proto="tcp udp"');
 		cmd.push('uci set firewall.dns_53_redirect.src_dport=53');
 		cmd.push('uci set firewall.dns_53_redirect.dest_port=53');
 		cmd.push('uci set firewall.dns_53_redirect.target=DNAT');
@@ -7363,9 +7373,9 @@ function saveadblock_easyconfig() {
 
 	if (getValue('adblock_forcedns_easyconfig')) {
 		cmd.push('uci set firewall.dns_53_redirect=redirect');
-		cmd.push('uci set firewall.dns_53_redirect.name=\\\"Adblock DNS, port 53\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.name="Adblock DNS, port 53"');
 		cmd.push('uci set firewall.dns_53_redirect.src=lan');
-		cmd.push('uci set firewall.dns_53_redirect.proto=\\\"tcp udp\\\"');
+		cmd.push('uci set firewall.dns_53_redirect.proto="tcp udp"');
 		cmd.push('uci set firewall.dns_53_redirect.src_dport=53');
 		cmd.push('uci set firewall.dns_53_redirect.dest_port=53');
 		cmd.push('uci set firewall.dns_53_redirect.target=DNAT');
@@ -7395,7 +7405,7 @@ function checkdomain() {
 		return;
 	}
 
-	ubus_call('"file", "exec", {"command":"/etc/init.d/adblock","params":["' + config.services.adblock_searchcommand + '","' + getValue('adblock_domain') + '"]}', function(data) {
+	ubus_call('file', 'exec', { 'command': '/etc/init.d/adblock', 'params': [ config.services.adblock_searchcommand, getValue('adblock_domain') ] }, function(data) {
 		if (data.stdout) {
 			showMsg((data.stdout).replace(/\n/g,'<br>'));
 		}
@@ -7410,7 +7420,7 @@ function blocklistdomain() {
 	var cmd = [];
 	cmd.push('F=/etc/adblock/adblock.blocklist');
 	cmd.push('mkdir -p $(dirname $F)');
-	cmd.push('echo \\\"' + domain + '\\\" >> $F');
+	cmd.push('echo "' + domain + '" >> $F');
 	if (config.services.adblock) {
 		cmd.push('/etc/init.d/adblock restart');
 	} else {
@@ -7435,7 +7445,7 @@ function okremovefromblocklist() {
 
 	var cmd = [];
 	cmd.push('F=/etc/adblock/adblock.blocklist');
-	cmd.push('sed -i \\\"/^' + domain + '$/d\\\" \\\"$F\\\"');
+	cmd.push('sed -i "/^' + domain + '$/d" "$F"');
 	if (config.services.adblock) {
 		cmd.push('/etc/init.d/adblock restart');
 	} else {
@@ -7455,7 +7465,7 @@ function allowlistdomain() {
 	var cmd = [];
 	cmd.push('F=/etc/adblock/adblock.allowlist');
 	cmd.push('mkdir -p $(dirname $F)');
-	cmd.push('echo \\\"' + domain + '\\\" >> $F');
+	cmd.push('echo "' + domain + '" >> $F');
 	if (config.services.adblock) {
 		cmd.push('/etc/init.d/adblock restart');
 	} else {
@@ -7480,7 +7490,7 @@ function okremovefromallowlist() {
 
 	var cmd = [];
 	cmd.push('F=/etc/adblock/adblock.allowlist');
-	cmd.push('sed -i \\\"/^' + domain + '$/d\\\" \\\"$F\\\"');
+	cmd.push('sed -i "/^' + domain + '$/d" "$F"');
 	if (config.services.adblock) {
 		cmd.push('/etc/init.d/adblock restart');
 	} else {
@@ -7495,7 +7505,7 @@ function okremovefromallowlist() {
 /*****************************************************************************/
 
 function shownightmode() {
-	ubus_call('"easyconfig", "nightmode", {}', function(data) {
+	ubus_call('easyconfig', 'nightmode', {}, function(data) {
 		setValue('nightmode_led_auto_enabled', data.enabled);
 		setValue('nightmode_led_auto_latitude', data.latitude);
 		setValue('nightmode_led_auto_longitude', data.longitude);
@@ -7513,17 +7523,17 @@ function savenightmode() {
 
 	var cmd = [];
 	cmd.push('uci set easyconfig.global=easyconfig');
-	cmd.push('uci set easyconfig.global.latitude=\\\"' + getValue("nightmode_led_auto_latitude") + '\\\"');
-	cmd.push('uci set easyconfig.global.longitude=\\\"' + getValue("nightmode_led_auto_longitude") + '\\\"');
+	cmd.push('uci set easyconfig.global.latitude="' + getValue("nightmode_led_auto_latitude") + '"');
+	cmd.push('uci set easyconfig.global.longitude="' + getValue("nightmode_led_auto_longitude") + '"');
 	cmd.push('uci commit');
 	cmd.push('touch /etc/crontabs/root');
-	cmd.push('sed -i \\\"/easyconfig_nightmode/d\\\" /etc/crontabs/root');
+	cmd.push('sed -i "/easyconfig_nightmode/d" /etc/crontabs/root');
 	if (getValue("nightmode_led_auto_enabled")) {
-		cmd.push('echo \\\"1 0 * * * /usr/bin/easyconfig_nightmode.sh\\\" >> /etc/crontabs/root');
+		cmd.push('echo "1 0 * * * /usr/bin/easyconfig_nightmode.sh" >> /etc/crontabs/root');
 		cmd.push('/usr/bin/easyconfig_nightmode.sh >/dev/null 2>&1');
 	} else {
 		cmd.push('killall sunwait >/dev/null 2>&1');
-		cmd.push('ubus call easyconfig leds \'{\\\"action\\\":\\\"on\\\"}\' >/dev/null');
+		cmd.push('ubus call easyconfig leds \'{"action":"on"}\' >/dev/null');
 	}
 	cmd.push('/etc/init.d/cron restart');
 
@@ -7557,9 +7567,9 @@ function btn_nightmode_wifi_setcron() {
 		var cmd = [];
 		cmd.push('easyconfig_cron_helper.sh set wifi ' + timetable);
 		if (cron_check()) {
-			cmd.push('[ -n \\\"$(iw dev)\\\" ] && wifi down');
+			cmd.push('[ -n "$(iw dev)" ] && wifi down');
 		} else {
-			cmd.push('[ -z \\\"$(iw dev)\\\" ] && wifi up');
+			cmd.push('[ -z "$(iw dev)" ] && wifi up');
 		}
 		execute(cmd, function() {});
 	}
@@ -7577,15 +7587,15 @@ function okbtn_nightmode_wifi_off() {
 }
 
 function btn_nightmode_leds_on() {
-	ubus_call('"easyconfig", "leds", {"action":"on"}', function(data) {});
+	ubus_call('easyconfig', 'leds', { 'action': 'on' }, function(data) {});
 }
 
 function btn_nightmode_leds_off() {
-	ubus_call('"easyconfig", "leds", {"action":"off"}', function(data) {});
+	ubus_call('easyconfig', 'leds', { 'action': 'off'}, function(data) {});
 }
 
 function btn_nightmode_getlocation() {
-	ubus_call('"easyconfig", "geolocation", {}', function(data) {
+	ubus_call('easyconfig', 'geolocation', {}, function(data) {
 		if (data.status == 'success') {
 			setValue('nightmode_led_auto_latitude', data.lat ? data.lat : '');
 			setValue('nightmode_led_auto_longitude', data.lon ? data.lon : '');
@@ -7596,7 +7606,7 @@ function btn_nightmode_getlocation() {
 }
 
 function btn_nightmode_getlocationfromgps() {
-	ubus_call('"gps", "info", {}', function(data) {
+	ubus_call('gps', 'info', {}, function(data) {
 		if (typeof data.age === 'undefined') {
 			showMsg('Błąd odczytu lokalizacji', true);
 		} else {
@@ -7652,7 +7662,7 @@ function readgps() {
 			clearInterval(gpsID);
 			return;
 		}
-		ubus_call_nomsg('"gps", "info", {}', function(data) {
+		ubus_call_nomsg('gps', 'info', {}, function(data) {
 			if (typeof data.age === 'undefined') {
 				setValue('gps_fixtime', 'brak sygnału GPS');
 				setValue('gps_latitude', '-');
@@ -7740,7 +7750,7 @@ function showgps() {
 /*****************************************************************************/
 
 function showwol() {
-	ubus_call('"easyconfig", "wol", {}', function(data) {
+	ubus_call('easyconfig', 'wol', {}, function(data) {
 		var sorted = sortJSON(data.result, 'description', 'asc');
 		if (sorted.length > 0) {
 			var html = '<div class="row space">';
@@ -7803,8 +7813,8 @@ function savewol() {
 		cmd.push('uci add easyconfig wol');
 		section = '@wol[-1]';
 	}
-	cmd.push('uci set easyconfig.' + section + '.description=\\\"' + escapeShell(getValue('wol_description')) + '\\\"');
-	cmd.push('uci set easyconfig.' + section + '.mac=\\\"' + mac + '\\\"');
+	cmd.push('uci set easyconfig.' + section + '.description="' + escapeShell(getValue('wol_description')) + '"');
+	cmd.push('uci set easyconfig.' + section + '.mac="' + mac + '"');
 	cmd.push('uci set easyconfig.' + section + '.broadcast=' + (getValue('wol_broadcast') ? '1' : '0'));
 	if (config.button.code != '') {
 		cmd.push('uci set easyconfig.' + section + '.button=' + (getValue('wol_button') ? '1' : '0'));
@@ -7839,7 +7849,7 @@ function wolwakeupfromdetails() {
 
 function wolwakeup(section) {
 	if (section == '') { section = 'all'; }
-	ubus_call('"easyconfig", "wolwakeup", {"section":"' + section + '"}', function(data) {});
+	ubus_call('easyconfig', 'wolwakeup', { 'section': section }, function(data) {});
 }
 
 /*****************************************************************************/
@@ -7853,7 +7863,7 @@ function subnet2Mask(subnet) {
 }
 
 function shownetworks() {
-	ubus_call('"easyconfig", "networks", {}', function(data) {
+	ubus_call('easyconfig', 'networks', {}, function(data) {
 		var ports;
 		if (data.ports_mapping.length > 0) {
 			data.ports.forEach(e => {
@@ -7952,14 +7962,14 @@ function shownetworks() {
 
 function networkswifitoggle(section) {
 	var cmd = [];
-	cmd.push('SECTIONS=$(uci -q show wireless | awk -F. \'/\\\\\.network=\'\\\\\'\'\'' + section + '\'\'\\\\\'\'$/{print $2}\')');
+	cmd.push('SECTIONS=$(uci -q show wireless | awk -F. \'/\\.network=\'\\\'\'\'' + section + '\'\'\\\'\'$/{print $2}\')');
 	cmd.push('for SEC in $SECTIONS; do');
 	cmd.push(' T1=1');
 	cmd.push(' T2=$(uci -q get wireless.${SEC}.disabled)');
-	cmd.push(' [ \\\"x$T2\\\" = \\\"x1\\\" ] && T1=0');
+	cmd.push(' [ "x$T2" = "x1" ] && T1=0');
 	cmd.push(' uci set wireless.${SEC}.disabled=$T1');
 	cmd.push('done');
-	cmd.push('if [ -n \\\"$SECTIONS\\\" ]; then');
+	cmd.push('if [ -n "$SECTIONS" ]; then');
 	cmd.push(' uci commit wireless');
 	cmd.push(' wifi reload');
 	cmd.push('fi');
@@ -8132,7 +8142,7 @@ function savenetwork() {
 		return;
 	}
 
-	cmd.push('uci set network.' + json.section + '.description=\\\"' + escapeShell(getValue('network_description')) + '\\\"');
+	cmd.push('uci set network.' + json.section + '.description="' + escapeShell(getValue('network_description')) + '"');
 	cmd.push('uci set network.' + json.section + '.proto=static');
 	cmd.push('uci set network.' + json.section + '.device=' + json.device);
 	if (json.bridge != '') {
@@ -8140,7 +8150,7 @@ function savenetwork() {
 	}
 	if (config.cidrnotation) {
 		cmd.push('uci -q del network.' + json.section + '.ipaddr');
-		cmd.push('uci add_list network.' + json.section + '.ipaddr=\\\"' + ipaddr + '/' + maskToCidr(getValue('network_netmask')) + '\\\"');
+		cmd.push('uci add_list network.' + json.section + '.ipaddr="' + ipaddr + '/' + maskToCidr(getValue('network_netmask')) + '"');
 	} else {
 		cmd.push('uci set network.' + json.section + '.ipaddr=' + ipaddr);
 		cmd.push('uci set network.' + json.section + '.netmask=' + getValue('network_netmask'));
@@ -8169,7 +8179,7 @@ function savenetwork() {
 	cmd.push('uci set firewall.' + json.zone + '.forward=REJECT');
 
 	cmd.push('uci set firewall.' + json.section + '_dhcp=rule');
-	cmd.push('uci set firewall.' + json.section + '_dhcp.name=\\\"' + json.section + ' DHCP, ports 67-68\\\"');
+	cmd.push('uci set firewall.' + json.section + '_dhcp.name="' + json.section + ' DHCP, ports 67-68"');
 	cmd.push('uci set firewall.' + json.section + '_dhcp.src=' + json.section);
 	cmd.push('uci set firewall.' + json.section + '_dhcp.proto=udp');
 	cmd.push('uci set firewall.' + json.section + '_dhcp.src_port=67-68');
@@ -8178,12 +8188,12 @@ function savenetwork() {
 	cmd.push('uci set firewall.' + json.section + '_dhcp.family=ipv4');
 
 	cmd.push('uci set firewall.' + json.section + '_dns=rule');
-	cmd.push('uci set firewall.' + json.section + '_dns.name=\\\"' + json.section + ' DNS, port 53\\\"');
+	cmd.push('uci set firewall.' + json.section + '_dns.name="' + json.section + ' DNS, port 53"');
 	cmd.push('uci set firewall.' + json.section + '_dns.src=' + json.section);
 	cmd.push('uci set firewall.' + json.section + '_dns.dest_port=53');
 	cmd.push('uci set firewall.' + json.section + '_dns.target=ACCEPT');
 	cmd.push('uci set firewall.' + json.section + '_dns.family=ipv4');
-	cmd.push('uci set firewall.' + json.section + '_dns.proto=\\\"tcp udp\\\"');
+	cmd.push('uci set firewall.' + json.section + '_dns.proto="tcp udp"');
 
 	if (json.forwarding) {
 		cmd.push('uci -q del firewall.' + json.forwarding);
@@ -8247,7 +8257,7 @@ function savenetwork() {
 		if (vap.ssid != wlan_ssid) {
 			wlan_restart_required = true;
 		}
-		cmd.push('uci set wireless.' + section + '.ssid=\\\"' + escapeShell(wlan_ssid) + '\\\"');
+		cmd.push('uci set wireless.' + section + '.ssid="' + escapeShell(wlan_ssid) + '"');
 		var wlan_encryption = getValue('network_wlan_encryption_' + i);
 		if (vap.encryption != wlan_encryption) {
 			wlan_restart_required = true;
@@ -8264,7 +8274,7 @@ function savenetwork() {
 		if (vap.key != wlan_key) {
 			wlan_restart_required = true;
 		}
-		cmd.push('uci set wireless.' + section + '.key=\\\"' + escapeShell(wlan_key) + '\\\"');
+		cmd.push('uci set wireless.' + section + '.key="' + escapeShell(wlan_key) + '"');
 
 		if (getValue('network_wlan_isolate_' + i)) {
 			if (vap.isolate == 0) {
@@ -8407,7 +8417,7 @@ function cron_display(action, onclickprimary) {
 	var e = document.getElementById('cron_btn_primary');
 	e.onclick = function(){ cron_cancel(); onclickprimary(); }
 
-	ubus_call('"file", "exec", {"command":"easyconfig_cron_helper.sh","params":["get", "wifi"]}', function(data) {
+	ubus_call('file', 'exec', { 'command': 'easyconfig_cron_helper.sh', 'params': [ 'get', 'wifi' ] }, function(data) {
 		cron_decode(data.stdout);
 		setDisplay('div_cron', true);
 	})
@@ -8462,14 +8472,14 @@ function diagnostics() {
 	var info = '';
 	var resok = '<span style="color:green">OK</span>';
 	var resnotok = '<span style="color:red">źle</span>';
-	ubus_call('"network.interface.wan", "status", {}', function(data) {
+	ubus_call('network.interface.wan', 'status', {}, function(data) {
 		if (data.up) {
-			var hosts = ['8.8.8.8'];
+			var hosts = [ '8.8.8.8' ];
 			if (config.wan_dns[0]) { hosts.push(config.wan_dns[0]); }
 			if (config.wan_dns[1]) { hosts.push(config.wan_dns[1]); }
-			var hosts1 = ['google.com', 'facebook.com', 'x.com'];
+			var hosts1 = [ 'google.com', 'facebook.com', 'x.com' ];
 			hosts.push(...hosts1);
-			ubus_call('"file", "exec", {"command":"/usr/bin/pingraw","params":[' + hosts.map(h => `"${h}"`).join(',') + ']}', function(data1) {
+			ubus_call('file', 'exec', { 'command': '/usr/bin/pingraw', 'params': hosts }, function(data1) {
 				var result = JSON.parse(data1.stdout);
 
 				info += createRowForModal('Status połączenia z internetem', resok);
