@@ -5,9 +5,10 @@
 if [ $INTERFACE = "wan" ]; then
 	awk '{printf "%d\n", $1}' /proc/uptime >> /tmp/easyconfig_wan_up
 
+	sleep 5
+
 	VPNS=$(uci show network | awk -F. '/trigger='\''wan'\''$/{print $2}')
 	if [ -n "$VPNS" ]; then
-		sleep 5
 		for VPN in $VPNS; do
 			if [ "x$(uci -q get network.$VPN.auto)" = "x0" ]; then
 				ifup $VPN
@@ -17,7 +18,6 @@ if [ $INTERFACE = "wan" ]; then
 
 	OVPNS=$(uci -q show openvpn | awk -F. '/trigger='\''wan'\''$/{print $2}')
 	if [ -n "$OVPNS" ]; then
-		sleep 5
 		for OVPN in $OVPNS; do
 			uci set openvpn.$OVPN.enabled=1
 		done
@@ -27,7 +27,6 @@ if [ $INTERFACE = "wan" ]; then
 
 	ZT=$(uci -q get zerotier.global.trigger)
 	if [ "x$ZT" = "xwan" ]; then
-		sleep 5
 		uci set zerotier.global.enabled=1
 		/etc/init.d/zerotier restart
 		uci revert zerotier
