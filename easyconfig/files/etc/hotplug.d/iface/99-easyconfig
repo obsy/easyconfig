@@ -16,20 +16,24 @@ if [ $INTERFACE = "wan" ]; then
 		done
 	fi
 
-	OVPNS=$(uci -q show openvpn | awk -F. '/trigger='\''wan'\''$/{print $2}')
-	if [ -n "$OVPNS" ]; then
-		for OVPN in $OVPNS; do
-			uci set openvpn.$OVPN.enabled=1
-		done
-		/etc/init.d/openvpn restart
-		uci revert openvpn
+	if [ -e /etc/config/openvpn ]; then
+		OVPNS=$(uci -q show openvpn | awk -F. '/trigger='\''wan'\''$/{print $2}')
+		if [ -n "$OVPNS" ]; then
+			for OVPN in $OVPNS; do
+				uci set openvpn.$OVPN.enabled=1
+			done
+			/etc/init.d/openvpn restart
+			uci revert openvpn
+		fi
 	fi
 
-	ZT=$(uci -q get zerotier.global.trigger)
-	if [ "x$ZT" = "xwan" ]; then
-		uci set zerotier.global.enabled=1
-		/etc/init.d/zerotier restart
-		uci revert zerotier
+	if [ -e /etc/config/zerotier ]; then
+		ZT=$(uci -q get zerotier.global.trigger)
+		if [ "x$ZT" = "xwan" ]; then
+			uci set zerotier.global.enabled=1
+			/etc/init.d/zerotier restart
+			uci revert zerotier
+		fi
 	fi
 fi
 

@@ -6597,11 +6597,11 @@ function saveopenvpn() {
 			return;
 		}
 	}
+	proofreadText(document.getElementById('vpn_openvpn_configtext'), function(text){ return 0; }, 0);
 
 	cancelopenvpn();
 
 	var interface = getValue('vpn_openvpn_interface');
-	var section = getValue('vpn_openvpn_section');
 	if (interface == '') {
 		interface = getRandomString();
 	}
@@ -6610,29 +6610,46 @@ function saveopenvpn() {
 	});
 
 	cmd.push('uci set network.' + interface + '=interface');
-	cmd.push('uci set network.' + interface + '.proto=none');
 	if (config.devicesection) {
 		cmd.push('uci set network.' + interface + '.device=' + interface);
 	} else {
 		cmd.push('uci set network.' + interface + '.ifname=' + interface);
 	}
 
-	cmd.push('uci set openvpn.' + section + '=openvpn');
-	cmd.push('uci set openvpn.' + section + '.name="' + escapeShell(getValue('vpn_openvpn_name')) + '"');
-	cmd.push('uci set openvpn.' + section + '.username="' + escapeShell(getValue('vpn_openvpn_username')) + '"');
-	cmd.push('uci set openvpn.' + section + '.password="' + escapeShell(getValue('vpn_openvpn_password')) + '"');
-	cmd.push('uci set openvpn.' + section + '.dev=' + interface);
-	cmd.push('uci set openvpn.' + section + '.dev_type=tun');
-	cmd.push('CFG=$(uci -q get openvpn.' + section + '.config)');
-	cmd.push('if [ ! -e "$CFG" ]; then');
-	cmd.push(' mkdir -p /etc/openvpn/');
-	cmd.push(' CFG="/etc/openvpn/' + interface + '"');
-	cmd.push('fi');
-	cmd.push('uci set openvpn.' + section + '.config=$CFG');
-	cmd.push('cat /tmp/' + interface + ' > $CFG');
+	if (config.services.openvpnproto) {
+		cmd.push('uci set network.' + interface + '.proto=openvpn');
+		cmd.push('uci set network.' + interface + '.name="' + escapeShell(getValue('vpn_openvpn_name')) + '"');
+		cmd.push('uci set network.' + interface + '.username="' + escapeShell(getValue('vpn_openvpn_username')) + '"');
+		cmd.push('uci set network.' + interface + '.password="' + escapeShell(getValue('vpn_openvpn_password')) + '"');
+		cmd.push('uci set network.' + interface + '.dev_type=tun');
+		cmd.push('CFG=$(uci -q get network.' + interface + '.config)');
+		cmd.push('if [ ! -e "$CFG" ]; then');
+		cmd.push(' mkdir -p /etc/openvpn/' + interface);
+		cmd.push(' CFG="/etc/openvpn/' + interface + '/' + interface + '_config.cfg"');
+		cmd.push('fi');
+		cmd.push('uci set network.' + interface + '.config=$CFG');
+		cmd.push('echo "dev ' + interface + '" > $CFG');
+		cmd.push('sed "/^dev[[:space:]].*/d" /tmp/' + interface + ' >> $CFG');
+	} else {
+		cmd.push('uci set network.' + interface + '.proto=none');
+		var section = getValue('vpn_openvpn_section');
+		cmd.push('uci set openvpn.' + section + '=openvpn');
+		cmd.push('uci set openvpn.' + section + '.name="' + escapeShell(getValue('vpn_openvpn_name')) + '"');
+		cmd.push('uci set openvpn.' + section + '.username="' + escapeShell(getValue('vpn_openvpn_username')) + '"');
+		cmd.push('uci set openvpn.' + section + '.password="' + escapeShell(getValue('vpn_openvpn_password')) + '"');
+		cmd.push('uci set openvpn.' + section + '.dev=' + interface);
+		cmd.push('uci set openvpn.' + section + '.dev_type=tun');
+		cmd.push('CFG=$(uci -q get openvpn.' + section + '.config)');
+		cmd.push('if [ ! -e "$CFG" ]; then');
+		cmd.push(' mkdir -p /etc/openvpn/');
+		cmd.push(' CFG="/etc/openvpn/' + interface + '"');
+		cmd.push('fi');
+		cmd.push('uci set openvpn.' + section + '.config=$CFG');
+		cmd.push('cat /tmp/' + interface + ' > $CFG');
+	}
 	cmd.push('rm /tmp/' + interface);
 
-	savevpnfirewall(cmd, interface, getValue('vpn_openvpn_zone_input'), getValue('vpn_openvpn_lanto'));
+	setVpnFirewall(cmd, interface, getValue('vpn_openvpn_zone_input'), getValue('vpn_openvpn_lanto'));
 
 	if (getValue('vpn_openvpn_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -6644,24 +6661,27 @@ function saveopenvpn() {
 		cmd.push('fi');
 	}
 
-	switch (parseInt(getValue('vpn_openvpn_auto'))) {
-		case 0:
-			cmd.push('uci set openvpn.' + section + '.enabled=0');
-			cmd.push('uci -q del openvpn.' + section + '.trigger');
-			break;
-		case 1:
-			cmd.push('uci set openvpn.' + section + '.enabled=1');
-			cmd.push('uci -q del openvpn.' + section + '.trigger');
-			break;
-		case 2:
-			cmd.push('uci set openvpn.' + section + '.enabled=0');
-			cmd.push('uci set openvpn.' + section + '.trigger=wan');
-			break;
+	if (config.services.openvpnproto) {
+		setVpnTrigger(cmd, interface, getValue('vpn_openvpn_auto'));
+	} else {
+		switch (parseInt(getValue('vpn_openvpn_auto'))) {
+			case 0:
+				cmd.push('uci set openvpn.' + section + '.enabled=0');
+				cmd.push('uci -q del openvpn.' + section + '.trigger');
+				break;
+			case 1:
+				cmd.push('uci set openvpn.' + section + '.enabled=1');
+				cmd.push('uci -q del openvpn.' + section + '.trigger');
+				break;
+			case 2:
+				cmd.push('uci set openvpn.' + section + '.enabled=0');
+				cmd.push('uci set openvpn.' + section + '.trigger=wan');
+				break;
+		}
+		cmd.push('uci commit');
+		cmd.push('ubus call network reload');
+		cmd.push('/etc/init.d/openvpn restart');
 	}
-
-	cmd.push('uci commit');
-	cmd.push('ubus call network reload');
-	cmd.push('/etc/init.d/openvpn restart');
 
 	execute(cmd, showvpn);
 }
@@ -6719,7 +6739,7 @@ function savepptp() {
 		cmd.push('uci set network.' + interface + '.pppd_options="nomppe"');
 	}
 
-	savevpnfirewall(cmd, interface, getValue('vpn_pptp_zone_input'), getValue('vpn_pptp_lanto'));
+	setVpnFirewall(cmd, interface, getValue('vpn_pptp_zone_input'), getValue('vpn_pptp_lanto'));
 
 	if (getValue('vpn_pptp_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -6731,29 +6751,7 @@ function savepptp() {
 		cmd.push('fi');
 	}
 
-	switch (parseInt(getValue('vpn_pptp_auto'))) {
-		case 0:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-		case 1:
-			cmd.push('uci -q del network.' + interface + '.auto');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifup ' + interface);
-			break;
-		case 2:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci set network.' + interface + '.trigger=wan');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-	}
+	setVpnTrigger(cmd, interface, getValue('vpn_pptp_auto'));
 
 	execute(cmd, showvpn);
 }
@@ -6791,7 +6789,7 @@ function savesstp() {
 	cmd.push('uci set network.' + interface + '.username="' + escapeShell(getValue('vpn_sstp_username')) + '"');
 	cmd.push('uci set network.' + interface + '.password="' + escapeShell(getValue('vpn_sstp_password')) + '"');
 
-	savevpnfirewall(cmd, interface, getValue('vpn_sstp_zone_input'), getValue('vpn_sstp_lanto'));
+	setVpnFirewall(cmd, interface, getValue('vpn_sstp_zone_input'), getValue('vpn_sstp_lanto'));
 
 	if (getValue('vpn_sstp_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -6803,29 +6801,7 @@ function savesstp() {
 		cmd.push('fi');
 	}
 
-	switch (parseInt(getValue('vpn_sstp_auto'))) {
-		case 0:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-		case 1:
-			cmd.push('uci -q del network.' + interface + '.auto');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifup ' + interface);
-			break;
-		case 2:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci set network.' + interface + '.trigger=wan');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-	}
+	setVpnTrigger(cmd, interface, getValue('vpn_sstp_auto'));
 
 	execute(cmd, showvpn);
 }
@@ -7054,7 +7030,7 @@ function savewireguard() {
 		}
 	}
 
-	savevpnfirewall(cmd, interface, getValue('vpn_wireguard_zone_input'), getValue('vpn_wireguard_lanto'));
+	setVpnFirewall(cmd, interface, getValue('vpn_wireguard_zone_input'), getValue('vpn_wireguard_lanto'));
 
 	if (getValue('vpn_wireguard_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -7066,29 +7042,7 @@ function savewireguard() {
 		cmd.push('fi');
 	}
 
-	switch (parseInt(getValue('vpn_wireguard_auto'))) {
-		case 0:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-		case 1:
-			cmd.push('uci -q del network.' + interface + '.auto');
-			cmd.push('uci -q del network.' + interface + '.trigger');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifup ' + interface);
-			break;
-		case 2:
-			cmd.push('uci set network.' + interface + '.auto=0');
-			cmd.push('uci set network.' + interface + '.trigger=wan');
-			cmd.push('uci commit');
-			cmd.push('ubus call network reload');
-			cmd.push('ifdown ' + interface );
-			break;
-	}
+	setVpnTrigger(cmd, interface, getValue('vpn_wireguard_auto'));
 
 	execute(cmd, showvpn);
 }
@@ -7159,7 +7113,7 @@ function savezerotier() {
 	cmd.push('uci set network.' + interface + '.proto=none');
 	cmd.push('uci set network.' + interface + '.device=zt' + interface);
 
-	savevpnfirewall(cmd, interface, getValue('vpn_zerotier_zone_input'), getValue('vpn_zerotier_lanto'));
+	setVpnFirewall(cmd, interface, getValue('vpn_zerotier_zone_input'), getValue('vpn_zerotier_lanto'));
 
 	if (getValue('vpn_zerotier_button')) {
 		cmd.push('uci set easyconfig.vpn=button');
@@ -7193,7 +7147,7 @@ function savezerotier() {
 	execute(cmd, showvpn);
 }
 
-function savevpnfirewall(cmd, interface, inputpolicy, lanto) {
+function setVpnFirewall(cmd, interface, inputpolicy, lanto) {
 	cmd.push('uci set firewall.' + interface + '=zone');
 	cmd.push('uci set firewall.' + interface + '.name=' + interface);
 	cmd.push('uci -q del firewall.' + interface + '.network');
@@ -7224,6 +7178,32 @@ function savevpnfirewall(cmd, interface, inputpolicy, lanto) {
 		cmd.push('uci -q del firewall.' + interface + '.mtu_fix');
 		cmd.push('uci -q del firewall.f1' + interface);
 		cmd.push('uci -q del firewall.f2' + interface);
+	}
+}
+
+function setVpnTrigger(cmd, interface, triggertype) {
+	switch (parseInt(triggertype)) {
+		case 0:
+			cmd.push('uci set network.' + interface + '.auto=0');
+			cmd.push('uci -q del network.' + interface + '.trigger');
+			cmd.push('uci commit');
+			cmd.push('ubus call network reload');
+			cmd.push('ifdown ' + interface );
+			break;
+		case 1:
+			cmd.push('uci -q del network.' + interface + '.auto');
+			cmd.push('uci -q del network.' + interface + '.trigger');
+			cmd.push('uci commit');
+			cmd.push('ubus call network reload');
+			cmd.push('ifup ' + interface );
+			break;
+		case 2:
+			cmd.push('uci set network.' + interface + '.auto=0');
+			cmd.push('uci set network.' + interface + '.trigger=wan');
+			cmd.push('uci commit');
+			cmd.push('ubus call network reload');
+			cmd.push('ifdown ' + interface );
+			break;
 	}
 }
 

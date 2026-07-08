@@ -798,6 +798,12 @@ VPN=""
 [ -e /lib/netifd/proto/sstp.sh ] && VPN=${VPN}'"sstp",'
 [ -e /lib/netifd/proto/wireguard.sh ] && VPN=${VPN}'"wireguard",'
 [ -e /etc/init.d/openvpn ] && VPN=${VPN}'"openvpn",'
+if [ -e /lib/netifd/proto/openvpn.sh ]; then
+	VPN=${VPN}'"openvpn",'
+	echo '"openvpnproto":true,'
+else
+	echo '"openvpnproto":false,'
+fi
 if [ -e /etc/init.d/zerotier ]; then
 	T=$(uci -q get zerotier.global)
 	[ "x$T" = "xzerotier" ] && VPN=${VPN}'"zerotier",'
@@ -1813,7 +1819,7 @@ show_vpn_up()
 	fi
 
 	T=$(ubus call network.interface dump)
-	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
+	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="openvpn" || @.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
 
 	if [ -e /etc/config/openvpn ]; then
 		OVPNS=$(uci show openvpn | awk -F[.=] '/\.config=/{print $2}')
@@ -1849,7 +1855,7 @@ show_vpn()
 	echo '{"result":['
 
 	T=$(ubus call network.interface dump)
-	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
+	INTERFACES=$(jsonfilter -s "$T" -q -e '@.interface[@.proto="openvpn" || @.proto="pptp" || @.proto="sstp" || @.proto="wireguard"].interface')
 
 	if [ -e /etc/config/openvpn ]; then
 		OVPNS=$(uci show openvpn | awk -F[.=] '/\.config=/{print $2}')
@@ -1914,8 +1920,12 @@ show_vpn()
 		CUSTOM=""
 		case $PROTO in
 			"openvpn")
-				NAME=$(uci -q get openvpn.$SEC.name)
-				CUSTOM=",\"section\":\"$SEC\""
+				if [ -e /etc/config/openvpn ]; then
+					NAME=$(uci -q get openvpn.$SEC.name)
+					CUSTOM=",\"section\":\"$SEC\""
+				else
+					NAME=$(uci -q get network.$INTERFACE.name)
+				fi
 				;;
 			"pptp" | "sstp")
 				NAME=$(uci -q get network.$INTERFACE.name)
@@ -2037,7 +2047,7 @@ show_vpn_details()
 		AUTOSTART=$(uci -q get network.$interface.auto)
 		TRIGGER=$(uci -q get network.$interface.trigger)
 		PROTO=$(uci -q get network.$interface.proto)
-		if [ "x$proto" = "xopenvpn" ]; then
+		if [ "x$proto" = "xopenvpn" ] && [ ! -e /lib/netifd/proto/openvpn.sh ]; then
 			AUTOSTART=$(uci -q get openvpn.$section.enabled)
 			TRIGGER=$(uci -q get openvpn.$section.trigger)
 			PROTO="openvpn"
@@ -2068,20 +2078,30 @@ show_vpn_details()
 	fi
 	echo "{\"proto\":\"$PROTO\",\"autostart\":${AUTOSTART:-1},\"button\":${BUTTON:-false},\"input\":\"${INPUT:-r}\",\"lanto\":${LANTO:-0},\"trigger\":\"$TRIGGER\","
 	if [ "x$PROTO" = "xopenvpn" ]; then
-		NAME=$(uci -q get openvpn.$section.name)
-		if [ -z "$NAME" ]; then
-			if [ -n "$interface" ]; then
-				NAME=$interface
-			else
-				NAME=$section
+		if [ -e /lib/netifd/proto/openvpn.sh ]; then
+			NAME=$(uci -q get network.$interface.name)
+			USERNAME=$(uci -q get network.$interface.username)
+			PASSWORD=$(uci -q get network.$interface.password)
+			json_init
+			json_add_string config "$(escapeJSON "$(cat $(uci -q get network.$interface.config) 2>/dev/null)")"
+			json_get_vars config
+			echo "\"name\":\""$(escapeJSON "${NAME:-$interface}")"\",\"username\":\""$(escapeJSON "$USERNAME")"\",\"password\":\""$(escapeJSON "$PASSWORD")"\",\"configtext\":\"$config\"}"
+		else
+			NAME=$(uci -q get openvpn.$section.name)
+			if [ -z "$NAME" ]; then
+				if [ -n "$interface" ]; then
+					NAME=$interface
+				else
+					NAME=$section
+				fi
 			fi
+			USERNAME=$(uci -q get openvpn.$section.username)
+			PASSWORD=$(uci -q get openvpn.$section.password)
+			json_init
+			json_add_string config "$(escapeJSON "$(cat $(uci -q get openvpn.$section.config) 2>/dev/null)")"
+			json_get_vars config
+			echo "\"section\":\"$section\",\"name\":\""$(escapeJSON "${NAME}")"\",\"username\":\""$(escapeJSON "$USERNAME")"\",\"password\":\""$(escapeJSON "$PASSWORD")"\",\"configtext\":\"$config\"}"
 		fi
-		USERNAME=$(uci -q get openvpn.$section.username)
-		PASSWORD=$(uci -q get openvpn.$section.password)
-		json_init
-		json_add_string config "$(escapeJSON "$(cat $(uci -q get openvpn.$section.config) 2>/dev/null)")"
-		json_get_vars config
-		echo "\"section\":\"$section\",\"name\":\""$(escapeJSON "${NAME}")"\",\"username\":\""$(escapeJSON "$USERNAME")"\",\"password\":\""$(escapeJSON "$PASSWORD")"\",\"configtext\":\"$config\"}"
 	fi
 	if [ "x$PROTO" = "xpptp" ]; then
 		NAME=$(uci -q get network.$interface.name)
