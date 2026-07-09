@@ -6005,7 +6005,7 @@ function upgrade_step3() {
 /*****************************************************************************/
 
 function upvpn(proto, interface, section) {
-	if (proto == 'openvpn') {
+	if (proto == 'openvpn' && !config.services.openvpnproto) {
 		var cmd = [];
 		cmd.push('uci set openvpn.' + section + '.enabled=1');
 		cmd.push('/etc/init.d/openvpn reload');
@@ -6025,7 +6025,7 @@ function upvpn(proto, interface, section) {
 }
 
 function downvpn(proto, interface, section) {
-	if (proto == 'openvpn') {
+	if (proto == 'openvpn' && !config.services.openvpnproto) {
 		var cmd = [];
 		cmd.push('uci set openvpn.' + section + '.enabled=0');
 		cmd.push('/etc/init.d/openvpn reload');
@@ -6552,13 +6552,27 @@ function okremoveopenvpn() {
 
 	if (interface != '') {
 		cmd.push('ifdown ' + interface);
+		if (config.services.openvpnproto) {
+			cmd.push('CFG=$(uci -q get network.' + interface + '.config)');
+		}
 		cmd.push('uci -q del network.' + interface);
 		cmd.push('uci -q del firewall.' + interface);
 		cmd.push('uci -q del firewall.f1' + interface);
 		cmd.push('uci -q del firewall.f2' + interface);
 	}
-	cmd.push('rm $(uci -q get openvpn.' + section + '.config)');
-	cmd.push('uci -q del openvpn.' + section);
+	if (!config.services.openvpnproto) {
+		cmd.push('CFG=$(uci -q get openvpn.' + section + '.config)');
+		cmd.push('uci -q del openvpn.' + section);
+	}
+	cmd.push('if [ -e "$CFG" ]; then');
+	cmd.push(' rm "$CFG"');
+	cmd.push('fi');
+	if (config.services.openvpnproto) {
+		cmd.push('T=$(dirname "$CFG")');
+		cmd.push('if [ "$T" = "/etc/openvpn/' + interface + '" ]; then');
+		cmd.push(' [ -d "$T" ] && rm -r "$T"');
+		cmd.push('fi');
+	}
 	cmd.push('uci commit');
 	cmd.push('reload_config');
 	cmd.push('ubus call network reload');
