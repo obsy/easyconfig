@@ -197,7 +197,7 @@ function escapeHTML(str) {
 		"'": '&#39;'
 	};
 
-	return String(str).replace(/[&<>]/g, function(tag) {
+	return String(str).replace(/[&<>"']/g, function(tag) {
 		return tagsToReplace[tag];
 	});
 }
@@ -271,7 +271,7 @@ function validateIP(address) {
 		if (ipFields == null) {
 			errorCode = 3;
 		} else {
-			for (field=1; field <= 4; field++) {
+			for (var field = 1; field <= 4; field++) {
 				if (ipFields[field] > 255) {
 					errorCode = 4;
 				}
@@ -416,7 +416,7 @@ function createRow9ColForModal(arr) {
 function getRevision() {
 	var revision = 0;
 	var tmp = config.revision.match(/^r([0-9]*)-[0-9a-f]*/);
-	if (tmp.length > 0) {
+	if (tmp && tmp.length > 0) {
 		revision = parseInt(tmp[1]) || 0;
 	}
 	return revision;
@@ -6564,7 +6564,7 @@ function okremoveopenvpn() {
 		cmd.push('CFG=$(uci -q get openvpn.' + section + '.config)');
 		cmd.push('uci -q del openvpn.' + section);
 	}
-	cmd.push('if [ -e "$CFG" ]; then');
+	cmd.push('if [ -f "$CFG" ]; then');
 	cmd.push(' rm "$CFG"');
 	cmd.push('fi');
 	if (config.services.openvpnproto) {
@@ -8466,6 +8466,7 @@ function diagnostics() {
 	var info = '';
 	var resok = '<span style="color:green">OK</span>';
 	var resnotok = '<span style="color:red">źle</span>';
+	var resunknown = '<span>nieznany</span>';
 	ubus_call('network.interface.wan', 'status', {}, function(data) {
 		if (data.up) {
 			var hosts = [ '8.8.8.8' ];
@@ -8474,7 +8475,18 @@ function diagnostics() {
 			var hosts1 = [ 'google.com', 'facebook.com', 'x.com' ];
 			hosts.push(...hosts1);
 			ubus_call('file', 'exec', { 'command': '/usr/bin/pingraw', 'params': hosts }, function(data1) {
-				var result = JSON.parse(data1.stdout);
+				var result;
+				try {
+					result = JSON.parse(data1.stdout);
+				} catch (e) {
+					showMsg(createRowForModal('Status połączenia z internetem', resunknown));
+					return;
+				}
+
+				if (!Array.isArray(result)) {
+					showMsg(createRowForModal('Status połączenia z internetem', resunknown));
+					return;
+				}
 
 				info += createRowForModal('Status połączenia z internetem', resok);
 
@@ -8509,9 +8521,7 @@ function diagnostics() {
 				showMsg(info);
 			})
 		} else {
-			info += createRowForModal('Status połączenia z internetem', resnotok);
-
-			showMsg(info);
+			showMsg(createRowForModal('Status połączenia z internetem', resnotok));
 		}
 	})
 }
@@ -8937,6 +8947,7 @@ function upload_file(file) {
 
 	if (!isTextType && !isTextExt) {
 		setValue('upload_status', 'Plik nieznanego typu');
+		return;
 	}
 
 	var reader = new FileReader();
