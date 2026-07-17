@@ -2117,17 +2117,18 @@ function convertToSpeed(val, fixedpow) {
 
 function bandwidthcallback(val) {
 	bandwidth_unit = val;
-	document.getElementById('bandwidth_bits').style.fontWeight = val ? 400 : 700;
-	document.getElementById('bandwidth_bytes').style.fontWeight = val ? 700 : 400;
+	document.getElementById('bandwidth_bits').classList.toggle('select-option-active', !val);
+	document.getElementById('bandwidth_bytes').classList.toggle('select-option-active', val);
 }
 
 function bandwidthcallbackavg() {
-	if (document.getElementById('bandwidth_avg').style.fontWeight == 700) {
+	var e = document.getElementById('bandwidth_avg');
+	if (e.classList.contains('select-option-active')) {
 		bandwidth_avg = false;
-		document.getElementById('bandwidth_avg').style.fontWeight = 400;
+		e.classList.toggle('select-option-active', false);
 	} else {
 		bandwidth_avg = true;
-		document.getElementById('bandwidth_avg').style.fontWeight = 700;
+		e.classList.toggle('select-option-active', true);
 	}
 }
 
@@ -2139,9 +2140,9 @@ function showbandwidth(mac, section) {
 	html += '<div class="row"><div class="col-xs-5 col-sm-6 text-right" id="bandwidth_speed_label_tx">Szybkość wysyłania</div><div class="col-xs-3 col-sm-3 text-left"><p id="bandwidth_speed_tx">-</p></div><div class="col-xs-4 col-sm-3 text-left"><p id="bandwidth_speed_max_tx">-</p></div></div>';
 	html += '<div class="row"><div class="col-xs-5 col-sm-6 text-right" id="bandwidth_speed_label_rx">Szybkość pobierania</div><div class="col-xs-3 col-sm-3 text-left"><p id="bandwidth_speed_rx">-</p></div><div class="col-xs-4 col-sm-3 text-left"><p id="bandwidth_speed_max_rx">-</p></div></div>';
 	html += '<div class="row space"><div class="col-xs-5 col-sm-6 text-right">Opcje</div><div class="col-xs-7 col-sm-6 text-left">';
-	html += '<span class="click" onclick="bandwidthcallback(false);"><span id="bandwidth_bits"> bity </span></span>|';
-	html += '<span class="click" onclick="bandwidthcallback(true);"><span id="bandwidth_bytes"> bajty </span></span>|';
-	html += '<span class="click" onclick="bandwidthcallbackavg();"><span id="bandwidth_avg"> średnia </span></span>';
+	html += '<span id="bandwidth_bits" class="select-option" onclick="bandwidthcallback(false);">bity</span>';
+	html += '<span id="bandwidth_bytes" class="select-option" onclick="bandwidthcallback(true);">bajty</span>';
+	html += '<span id="bandwidth_avg" class="select-option" onclick="bandwidthcallbackavg();">średnia</span>';
 	html += '</div></div>';
 	html += '<div class="row" id="div_bandwidth"><div class="col-xs-12"><canvas id="bandwidth" height="400"></canvas></div></div>';
 	showMsg(html);
@@ -2575,9 +2576,8 @@ function modembands4g() {
 			arr = modem.enabled;
 			for (var idx = 0; idx < arr.length; idx++) {
 				var e = document.getElementById('modembands_band_4g_' + arr[idx]);
-				if (e) {
+				if (e)
 					e.checked = 1;
-				}
 			}
 			setDisplay('div_modembands4g', true);
 		}
@@ -2634,9 +2634,8 @@ function modembands5gnsa() {
 			arr = modem.enabled5gnsa;
 			for (var idx = 0; idx < arr.length; idx++) {
 				var e = document.getElementById('modembands_band_5gnsa_' + arr[idx]);
-				if (e) {
+				if (e)
 					e.checked = 1;
-				}
 			}
 			setDisplay('div_modembands5gnsa', true);
 		}
@@ -2693,9 +2692,8 @@ function modembands5gsa() {
 			arr = modem.enabled5gsa;
 			for (var idx = 0; idx < arr.length; idx++) {
 				var e = document.getElementById('modembands_band_5gsa_' + arr[idx]);
-				if (e) {
+				if (e)
 					e.checked = 1;
-				}
 			}
 			setDisplay('div_modembands5gsa', true);
 		}
@@ -3489,9 +3487,8 @@ function sitesurveycallbackfilter(filterby) {
 	var all = ['all', '2', '5', '6'];
 	for (var idx = 0; idx < all.length; idx++) {
 		var e = document.getElementById('sitesurvey_filter_' + all[idx]);
-		if (e !== null) {
-			e.style.fontWeight = (filterby == all[idx]) ? 700 : 400;
-		}
+		if (e)
+			e.classList.toggle('select-option-active', filterby == all[idx]);
 	}
 	setCookie('easyconfig_sitesurvey_filterby', filterby);
 }
@@ -3532,39 +3529,37 @@ function sitesurveycallback(sortby) {
 		html += '<div class="col-xs-12 space">';
 		html += '<span>Filtrowanie:</span>';
 		if (is_radio2 + is_radio5 + is_radio6 >= 2) {
-			html += '<span class="click" onclick="sitesurveycallbackfilter(\'all\');sitesurveycallback(\'\');"><span id="sitesurvey_filter_all"> wszystkie (0) </span></span>|';
+			html += '<span id="sitesurvey_filter_all" class="select-option" onclick="sitesurveycallbackfilter(\'all\');sitesurveycallback(\'\');">wszystkie (0)</span>';
 		}
 		if (is_radio2) {
-			html += '<span class="click" onclick="sitesurveycallbackfilter(\'2\');sitesurveycallback(\'\');"><span id="sitesurvey_filter_2"> 2.4 GHz (0) </span></span>';
-			if (is_radio5 + is_radio6 > 0) { html += '|'; }
+			html += '<span id="sitesurvey_filter_2" class="select-option" onclick="sitesurveycallbackfilter(\'2\');sitesurveycallback(\'\');">' + hrband(2) + ' (0)</span>';
 		}
 		if (is_radio5) {
-			html += '<span class="click" onclick="sitesurveycallbackfilter(\'5\');sitesurveycallback(\'\');"><span id="sitesurvey_filter_5"> 5 GHz (0) </span></span>';
-			if (is_radio6) { html += '|'; }
+			html += '<span id="sitesurvey_filter_5" class="select-option" onclick="sitesurveycallbackfilter(\'5\');sitesurveycallback(\'\');">' + hrband(5) + ' (0)</span>';
 		}
 		if (is_radio6) {
-			html += '<span class="click" onclick="sitesurveycallbackfilter(\'6\');sitesurveycallback(\'\');"><span id="sitesurvey_filter_6"> 6 GHz (0) </span></span>';
+			html += '<span id="sitesurvey_filter_6" class="select-option" onclick="sitesurveycallbackfilter(\'6\');sitesurveycallback(\'\');">' + hrband(6) + ' (0)</span>';
 		}
 		html += '</div>';
 		html += '<div class="col-xs-12">';
 		html += '<span>Sortowanie po</span>';
-		html += '<span class="click" onclick="sitesurveycallback(\'ssid\');"><span id="sitesurvey_sortby_ssid"> nazwie </span></span>|';
-		html += '<span class="click" onclick="sitesurveycallback(\'mac\');"><span id="sitesurvey_sortby_mac"> adresie mac </span></span>|';
-		html += '<span class="click" onclick="sitesurveycallback(\'signal\');"><span id="sitesurvey_sortby_signal"> sile sygnału </span></span>|';
-		html += '<span class="click" onclick="sitesurveycallback(\'freq\');"><span id="sitesurvey_sortby_freq"> kanale </span></span>|';
-		html += '<span class="click" onclick="sitesurveycallback(\'timestamp\');"><span id="sitesurvey_sortby_timestamp"> widoczności </span></span>';
+		html += '<span id="sitesurvey_sortby_ssid" class="select-option" onclick="sitesurveycallback(\'ssid\');">nazwie</span>';
+		html += '<span id="sitesurvey_sortby_mac" class="select-option" onclick="sitesurveycallback(\'mac\');">adresie MAC</span>';
+		html += '<span id="sitesurvey_sortby_signal" class="select-option" onclick="sitesurveycallback(\'signal\');">sile sygnału</span>';
+		html += '<span id="sitesurvey_sortby_freq" class="select-option" onclick="sitesurveycallback(\'freq\');">kanale</span>';
+		html += '<span id="sitesurvey_sortby_timestamp" class="select-option" onclick="sitesurveycallback(\'timestamp\');">widoczności</span>';
 		html += '</div></div>';
 		html += '<div class="row" id="div_channels2" style="display:none">';
-		html += '<div class="col-xs-12"><h3 class="section">Sieci 2.4 GHz</h3><canvas id="channels2" height="400"></canvas></div>';
+		html += '<div class="col-xs-12"><h3 class="section">Sieci ' + hrband(2) + '</h3><canvas id="channels2" height="400"></canvas></div>';
 		html += '</div>';
 		html += '<div class="row" id="div_channels5" style="display:none">';
-		html += '<div class="col-xs-12"><h3 class="section">Sieci 5 GHz</h3></div>';
+		html += '<div class="col-xs-12"><h3 class="section">Sieci ' + hrband(5) + '</h3></div>';
 		html += '<div class="col-xs-12" id="div_channels51"><canvas id="channels51" height="400"></canvas></div>';
 		html += '<div class="col-xs-12" id="div_channels52"><canvas id="channels52" height="400"></canvas></div>';
 		html += '<div class="col-xs-12" id="div_channels53"><canvas id="channels53" height="400"></canvas></div>';
 		html += '</div>';
 		html += '<div class="row" id="div_channels6" style="display:none">';
-		html += '<div class="col-xs-12"><h3 class="section">Sieci 6 GHz</h3></div>';
+		html += '<div class="col-xs-12"><h3 class="section">Sieci ' + hrband(6) + '</h3></div>';
 		html += '<div class="col-xs-12" id="div_channels61"><canvas id="channels61" height="400"></canvas></div>';
 		html += '<div class="col-xs-12" id="div_channels62"><canvas id="channels62" height="400"></canvas></div>';
 		html += '<div class="col-xs-12" id="div_channels63"><canvas id="channels63" height="400"></canvas></div>';
@@ -3757,20 +3752,21 @@ function sitesurveycallback(sortby) {
 		all = ['ssid', 'mac', 'signal', 'freq', 'timestamp'];
 		for (var idx = 0; idx < all.length; idx++) {
 			var e = document.getElementById('sitesurvey_sortby_' + all[idx]);
-			e.style.fontWeight = (sortby == all[idx]) ? 700 : 400;
+			if (e)
+				e.classList.toggle('select-option-active', sortby == all[idx]);
 		}
 
 		if (is_radio2 + is_radio5 + is_radio6 >= 2) {
-			setValue('sitesurvey_filter_all', ' wszystkie (' + counter_all + ') ');
+			setValue('sitesurvey_filter_all', 'wszystkie (' + counter_all + ')');
 		}
 		if (is_radio2) {
-			setValue('sitesurvey_filter_2', ' 2.4 GHz (' + counter_2 + ') ');
+			setValue('sitesurvey_filter_2', hrband(2) + ' (' + counter_2 + ')');
 		}
 		if (is_radio5) {
-			setValue('sitesurvey_filter_5', ' 5 GHz (' + counter_5 + ') ');
+			setValue('sitesurvey_filter_5', hrband(5) + ' (' + counter_5 + ')');
 		}
 		if (is_radio6) {
-			setValue('sitesurvey_filter_6', ' 6 GHz (' + counter_6 + ') ');
+			setValue('sitesurvey_filter_6', hrband(6) + ' (' + counter_6 + ')');
 		}
 		sitesurveycallbackfilter(filterby);
 	}
@@ -4102,7 +4098,8 @@ function clientscallbackfilter(filterby) {
 	var all = ['active', 'all'];
 	for (var idx = 0; idx < all.length; idx++) {
 		var e = document.getElementById('clients_filter_' + all[idx]);
-		e.style.fontWeight = (filterby == all[idx]) ? 700 : 400;
+		if (e)
+			e.classList.toggle('select-option-active', filterby == all[idx]);
 	}
 	setCookie('easyconfig_clients_filterby', filterby);
 }
@@ -4111,7 +4108,8 @@ function clientscallbackfilterall(filterbyall) {
 	var all = ['all', 'day', 'week', 'month', 'year'];
 	for (var idx = 0; idx < all.length; idx++) {
 		var e = document.getElementById('clients_filterall_' + all[idx]);
-		e.style.fontWeight = (filterbyall == all[idx]) ? 700 : 400;
+		if (e)
+			e.classList.toggle('select-option-active', filterbyall == all[idx]);
 	}
 	setCookie('easyconfig_clients_filterbyall', filterbyall);
 }
@@ -4161,33 +4159,33 @@ function clientscallback(sortby) {
 	if (clients.length > 0) {
 		html += '<div class="row space"><div class="col-xs-9 space">';
 		html += '<span>Filtrowanie:</span>';
-		html += '<span class="click" onclick="clientscallbackfilter(\'active\');clientscallback(\'\');"><span id="clients_filter_active"> aktywni (0) </span></span>|';
-		html += '<span class="click" onclick="clientscallbackfilter(\'all\');clientscallback(\'\');"><span id="clients_filter_all"> wszyscy (0) </span></span>';
+		html += '<span id="clients_filter_active" class="select-option" onclick="clientscallbackfilter(\'active\');clientscallback(\'\');">aktywni (0)</span>';
+		html += '<span id="clients_filter_all" class="select-option" onclick="clientscallbackfilter(\'all\');clientscallback(\'\');">wszyscy (0)</span>';
 		html += '</div>';
 		html += '<div class="col-xs-3 text-right"><span class="click" title="nowi klienci" onclick="clientsstats();"><i data-feather="bar-chart-2"></i></span></div>';
 		if (filterby == 'all') {
 			html += '<div class="col-xs-12 space">';
 			html += '<span>Pokaż</span>';
-			html += '<span class="click" onclick="clientscallbackfilterall(\'day\');clientscallback(\'\');"><span id="clients_filterall_day"> z ostatniego dnia (0) </span></span>|';
-			html += '<span class="click" onclick="clientscallbackfilterall(\'week\');clientscallback(\'\');"><span id="clients_filterall_week"> z ostatniego tygodnia (0) </span></span>|';
-			html += '<span class="click" onclick="clientscallbackfilterall(\'month\');clientscallback(\'\');"><span id="clients_filterall_month"> z ostatnich 30 dni (0) </span></span>|';
-			html += '<span class="click" onclick="clientscallbackfilterall(\'year\');clientscallback(\'\');"><span id="clients_filterall_year"> z ostatniego roku (0) </span></span>|';
-			html += '<span class="click" onclick="clientscallbackfilterall(\'all\');clientscallback(\'\');"><span id="clients_filterall_all"> wszystko (0) </span></span>';
+			html += '<span id="clients_filterall_day" class="select-option" onclick="clientscallbackfilterall(\'day\');clientscallback(\'\');">z ostatniego dnia (0)</span>';
+			html += '<span id="clients_filterall_week" class="select-option" onclick="clientscallbackfilterall(\'week\');clientscallback(\'\');">z ostatniego tygodnia (0)</span>';
+			html += '<span id="clients_filterall_month" class="select-option" onclick="clientscallbackfilterall(\'month\');clientscallback(\'\');">z ostatnich 30 dni (0)</span>';
+			html += '<span id="clients_filterall_year" class="select-option" onclick="clientscallbackfilterall(\'year\');clientscallback(\'\');">z ostatniego roku (0)</span>';
+			html += '<span id="clients_filterall_all" class="select-option" onclick="clientscallbackfilterall(\'all\');clientscallback(\'\');">wszystko (0)</span></span>';
 			html += '</div>'
 		}
 		html += '<div class="col-xs-12">';
 		html += '<span>Sortowanie po</span>';
-		html += '<span class="click" onclick="clientscallback(\'displayname\');"><span id="clients_sortby_displayname"> nazwie </span></span>|';
+		html += '<span id="clients_sortby_displayname" class="select-option" onclick="clientscallback(\'displayname\');">nazwie</span>';
 		if (filterby == 'active') {
-			html += '<span class="click" onclick="clientscallback(\'tx\');"><span id="clients_sortby_tx"> wysłano </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'rx\');"><span id="clients_sortby_rx"> pobrano </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'percent\');"><span id="clients_sortby_percent"> udziale w ruchu </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'connected\');"><span id="clients_sortby_connected"> czasie połączenia </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'type\');"><span id="clients_sortby_type"> typie połączenia </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'ip\');"><span id="clients_sortby_ip"> adresie IP </span></span>';
+			html += '<span id="clients_sortby_tx" class="select-option" onclick="clientscallback(\'tx\');">wysłano</span>';
+			html += '<span id="clients_sortby_rx" class="select-option" onclick="clientscallback(\'rx\');">pobrano</span>';
+			html += '<span id="clients_sortby_percent" class="select-option" onclick="clientscallback(\'percent\');">udziale w ruchu</span>';
+			html += '<span id="clients_sortby_connected" class="select-option" onclick="clientscallback(\'connected\');">czasie połączenia</span>';
+			html += '<span id="clients_sortby_type" class="select-option" onclick="clientscallback(\'type\');">typie połączenia</span>';
+			html += '<span id="clients_sortby_ip" class="select-option" onclick="clientscallback(\'ip\');">adresie IP</span>';
 		} else {
-			html += '<span class="click" onclick="clientscallback(\'mac\');"><span id="clients_sortby_mac"> MAC </span></span>|';
-			html += '<span class="click" onclick="clientscallback(\'last_seen\');"><span id="clients_sortby_last_seen"> ostatniej widoczności </span></span>';
+			html += '<span id="clients_sortby_mac" class="select-option" onclick="clientscallback(\'mac\');">MAC</span>';
+			html += '<span id="clients_sortby_last_seen" class="select-option" onclick="clientscallback(\'last_seen\');">ostatniej widoczności</span>';
 		}
 		html += '</div></div>';
 
@@ -4347,25 +4345,25 @@ function clientscallback(sortby) {
 		all = ['displayname', 'tx', 'rx', 'percent', 'connected', 'type', 'ip', 'mac', 'last_seen'];
 		for (var idx = 0; idx < all.length; idx++) {
 			var e = document.getElementById('clients_sortby_' + all[idx]);
-			if (e === null) { continue; }
-			e.style.fontWeight = (sortby == all[idx]) ? 700 : 400;
+			if (e)
+				e.classList.toggle('select-option-active', sortby == all[idx]);
 		}
 		all = ['all', 'day', 'week', 'month', 'year'];
 		for (var idx = 0; idx < all.length; idx++) {
 			var e = document.getElementById('clients_filterall_' + all[idx]);
-			if (e === null) { continue; }
-			e.style.fontWeight = (filterbyall == all[idx]) ? 700 : 400;
+			if (e)
+				e.classList.toggle('select-option-active', filterbyall == all[idx]);
 		}
 		showicon();
 
-		setValue('clients_filter_active', ' aktywni (' + counter_active + ') ');
-		setValue('clients_filter_all', ' wszyscy (' + counter_all + ') ');
+		setValue('clients_filter_active', 'aktywni (' + counter_active + ')');
+		setValue('clients_filter_all', 'wszyscy (' + counter_all + ')');
 		if (filterby == 'all') {
-			setValue('clients_filterall_day', ' z ostatniego dnia (' + counter_all_day + ') ');
-			setValue('clients_filterall_week', ' z ostatniego tygodnia (' + counter_all_week + ') ');
-			setValue('clients_filterall_month', ' z ostatnich 30 dni (' + counter_all_month + ') ');
-			setValue('clients_filterall_year', ' z ostatniego roku (' + counter_all_year + ') ');
-			setValue('clients_filterall_all', ' wszystko (' + counter_all_all + ') ');
+			setValue('clients_filterall_day', 'z ostatniego dnia (' + counter_all_day + ')');
+			setValue('clients_filterall_week', 'z ostatniego tygodnia (' + counter_all_week + ')');
+			setValue('clients_filterall_month', 'z ostatnich 30 dni (' + counter_all_month + ')');
+			setValue('clients_filterall_year', 'z ostatniego roku (' + counter_all_year + ')');
+			setValue('clients_filterall_all', 'wszystko (' + counter_all_all + ')');
 		}
 		clientscallbackfilter(filterby);
 
@@ -5238,9 +5236,9 @@ function queriescallback(sortby, order) {
 		html += '</select></div></div>';
 
 		html += '<div class="row">';
-		html += '<div class="col-xs-6 col-sm-4"><span class="click" onclick="queriescallback(\'time\');"><span id="queries_sortby_time">Czas</span></span></div>';
-		html += '<div class="col-xs-6 col-sm-4"><span class="click" onclick="queriescallback(\'host\');"><span id="queries_sortby_host">Klient</span></span></div>';
-		html += '<div class="col-xs-12 col-sm-4"><span class="click" onclick="queriescallback(\'query\');"><span id="queries_sortby_query">Zapytanie</span></span></div>';
+		html += '<div class="col-xs-6 col-sm-4"><span id="queries_sortby_time" class="select-option" onclick="queriescallback(\'time\');">Czas</span></div>';
+		html += '<div class="col-xs-6 col-sm-4"><span id="queries_sortby_host" class="select-option" onclick="queriescallback(\'host\');">Klient</span></div>';
+		html += '<div class="col-xs-12 col-sm-4"><span id="queries_sortby_query" class="select-option" onclick="queriescallback(\'query\');">Zapytanie</span></div>';
 		html += '</div><hr>';
 
 		var sorted = sortJSON(filtered, sortby, (order ? order : 'asc'));
@@ -5264,7 +5262,8 @@ function queriescallback(sortby, order) {
 		var all = ['time', 'query', 'host'];
 		for (var idx = 0; idx < all.length; idx++) {
 			var e = document.getElementById('queries_sortby_' + all[idx]);
-			e.style.fontWeight = (sortby == all[idx]) ? 700 : 400;
+			if (e)
+				e.classList.toggle('select-option-active', sortby == all[idx]);
 		}
 		setValue('queries_hosts', btoa(selected));
 	}
