@@ -3426,14 +3426,16 @@ function formatDuration(s, showsec) {
 var wifiscanresults;
 
 function showsitesurvey() {
-	var n = config.wlan_current_channels.length;
-	if (n == 0) {
-		setValue('div_sitesurvey_content', '<div class="alert alert-warning">Brak sieci bezprzewodowych lub Wi-Fi jest wyłączone</div>');
-	} else {
-		for (var idx = 0; idx < n; idx++) {
-			ubus_call('easyconfig', 'wifiscan', { 'interface': config.wlan_current_channels[idx].interface }, showsitesurvey_praser);
+	ubus_call('easyconfig', 'wlansifaces', {}, function(data) {
+		var n = data.res.length;
+		if (n == 0 && !wifiscanresults) {
+			setValue('div_sitesurvey_content', '<div class="alert alert-warning">Brak sieci bezprzewodowych lub Wi-Fi jest wyłączone</div>');
+		} else {
+			for (var idx = 0; idx < n; idx++) {
+				ubus_call('easyconfig', 'wifiscan', { 'interface': data.res[idx] }, showsitesurvey_praser);
+			}
 		}
-	}
+	})
 }
 
 function showsitesurvey_praser(data) {

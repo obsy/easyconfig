@@ -1459,8 +1459,8 @@ show_wifiscan() {
 	if [ -n "$interface" ]; then
 		iw dev ${interface} scan -u 2>/dev/null | busybox awk 'function abs(value){return (value<0?-value:value)}{gsub("\\(on","");
 			if($0 ~ /^BSS.*/) {MAC = $2; wifi_enc[MAC] = ""; wifi_psk[MAC] = 0; wifi_psk2[MAC] = 0; wifi_chan[MAC] = "?"; wifi_mode1[MAC] = ""; wifi_mode2[MAC] = ""; wifi_bssload[MAC] = -1}
-			if($1 == "SSID:") {t="";for(i=2;i<=NF-1;++i){t=t$i" "};if(NF<2){t=""}else{t=t$NF}; gsub(/\\/,"\\\\\\", t); gsub(/"/, "\\\"", t); wifi_ssid[MAC]=t}
 			if($1 == "signal:") {wifi_sig[MAC] = $2}
+			if($1 == "SSID:") {t="";for(i=2;i<=NF-1;++i){t=t$i" "};if(NF<2){t=""}else{t=t$NF};gsub(/\\/,"\\\\",t);gsub(/"/,"\\\"",t);gsub(/\\\\x00/,"?",t);wifi_ssid[MAC]=t}
 			if($1 == "freq:") {wifi_freq[MAC] = $2; if($2>=5160){wifi_mode1[MAC] = "a"}else{wifi_mode1[MAC] = "g"}}
 			if($0 ~ /primary channel:/) {wifi_chan[MAC] = $4}
 			if($0 ~ /secondary channel offset: no secondary/) {wifi_mode1[MAC] = "n"; wifi_mode2[MAC] = "HT20"}
@@ -2544,6 +2544,16 @@ show_networks() {
 
 ##############################################################################
 
+wlansifaces() {
+	echo '{"res":['
+	T=$(ubus call network.wireless status | jsonfilter -q -e '@.*.interfaces[0]' | jsonfilter -q -a -e '@[@.config.mode="ap"].ifname' | xargs)
+	[ -n "$T" ] && T='"'${T// /\",\"}'"'
+	echo "$T"
+	echo ']}'
+}
+
+##############################################################################
+
 case "$1" in
 	list)
 		echo '{'
@@ -2580,7 +2590,8 @@ case "$1" in
 		echo '"nightmode":{},'
 		echo '"leds":{"action":"string"}',
 		echo '"wol":{}',
-		echo '"wolwakeup":{"section":"string"}'
+		echo '"wolwakeup":{"section":"string"}',
+		echo '"wlansifaces":{}'
 		echo '}'
 	;;
 	call)
@@ -2686,6 +2697,9 @@ case "$1" in
 				;;
 			wolwakeup)
 				wolwakeup
+				;;
+			wlansifaces)
+				wlansifaces
 				;;
 		esac
 	;;
