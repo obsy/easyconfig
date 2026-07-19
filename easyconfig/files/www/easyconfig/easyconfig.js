@@ -1883,17 +1883,17 @@ function saveconfig() {
 			cmd.push('uci set wireless.' + section + '.device=' + radios[i]);
 		}
 
+		cmd.push('uci -q del wireless.' + radios[i] + '.disabled');
 		if (getValue('wlan_enabled_' + i)) {
 			if (config[radios[i]].wlan_disabled == 1) {
 				wlan_restart_required = true;
 			}
-			cmd.push('uci -q del wireless.' + radios[i] + '.disabled');
 			cmd.push('uci -q del wireless.' + section + '.disabled');
 		} else {
 			if (config[radios[i]].wlan_disabled != 1) {
 				wlan_restart_required = true;
 			}
-			cmd.push('uci set wireless.' + radios[i] + '.disabled=1');
+			cmd.push('uci set wireless.' + section + '.disabled=1');
 		}
 
 		wlan_channel = getValue('wlan_channel_' + i);
