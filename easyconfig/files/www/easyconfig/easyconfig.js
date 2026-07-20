@@ -3631,6 +3631,9 @@ function sitesurveycallback(sortby) {
 				case 'ax':
 					html += '<br>Wi-Fi 6' + (freq2band(sorted[idx].freq) == 6 ? 'E' : '') + ' (' + mode + ')';
 					break;
+				case 'be':
+					html += '<br>Wi-Fi 7 (' + mode + ')';
+					break;
 				default:
 					html += '<br>' + mode;
 			}
@@ -3945,13 +3948,13 @@ var wifigraph = {
 			if (width == 'HT40-' || width == 'HE40-') {
 				x1 = wifigraph.getX(graph, data[i].channel - 6);
 				x11 = wifigraph.getX(graph, data[i].channel - 5);
-			} else 	if (width == 'VHT40' || width == 'HE40') {
+			} else if (width == 'VHT40' || width == 'HE40' || width == 'EHT40') {
 				x1 = wifigraph.getX(graph, data[i].vhtch1 - 4);
 				x11 = wifigraph.getX(graph, data[i].vhtch1 - 3);
-			} else if (width == 'VHT80' || width == 'VHT80+80' || width == 'HE80') {
+			} else if (width == 'VHT80' || width == 'VHT80+80' || width == 'HE80' || width == 'EHT80') {
 				x1 = wifigraph.getX(graph, data[i].vhtch1 - 8);
 				x11 = wifigraph.getX(graph, data[i].vhtch1 - 7);
-			} else if (width == 'VHT160' || width == 'HE160') {
+			} else if (width == 'VHT160' || width == 'HE160' || width == 'EHT160') {
 				x1 = wifigraph.getX(graph, data[i].vhtch2 - 16);
 				x11 = wifigraph.getX(graph, data[i].vhtch2 - 15);
 			} else {
@@ -3962,13 +3965,13 @@ var wifigraph = {
 			if (width == 'HT40+' || width == 'HE40+') {
 				x2 = wifigraph.getX(graph, data[i].channel + 6);
 				x22 = wifigraph.getX(graph, data[i].channel + 5);
-			} else if (width == 'VHT40' || width == 'HE40') {
+			} else if (width == 'VHT40' || width == 'HE40' || width == 'EHT40') {
 				x2 = wifigraph.getX(graph, data[i].vhtch1 + 4);
 				x22 = wifigraph.getX(graph, data[i].vhtch1 + 3);
-			} else if (width == 'VHT80' || width == 'VHT80+80' || width == 'HE80') {
+			} else if (width == 'VHT80' || width == 'VHT80+80' || width == 'HE80' || width == 'EHT80') {
 				x2 = wifigraph.getX(graph, data[i].vhtch1 + 8);
 				x22 = wifigraph.getX(graph, data[i].vhtch1 + 7);
-			} else if (width == 'VHT160' || width == 'HE160') {
+			} else if (width == 'VHT160' || width == 'HE160' || width == 'EHT160') {
 				x2 = wifigraph.getX(graph, data[i].vhtch2 + 16);
 				x22 = wifigraph.getX(graph, data[i].vhtch2 + 15);
 			} else {
