@@ -1196,14 +1196,24 @@ wan['xmm'] = 'Modem komórkowy Fibocom L850/L860/FM350';
 wan['-'] = ' ';
 wan['detect'] = 'Wykryj...';
 
-function setEncryption(element, encryption) {
+function setEncryption(element, is6, encryption) {
 	var enc = [];
-	enc['none'] = 'Brak';
-	enc['psk'] = 'WPA Personal';
-	enc['psk2'] = 'WPA2 Personal';
-	if (config.services.sae) {
-		enc['sae-mixed'] = 'WPA2/WPA3 Personal';
-		enc['sae'] = 'WPA3 Personal';
+	if (is6) {
+		if (config.services.sae) {
+			enc['owe'] = 'OWE';
+			enc['sae'] = 'WPA3 Personal';
+		} else {
+			// Missing sae?
+			enc['none'] = 'Brak';
+		}
+	} else {
+		enc['none'] = 'Brak';
+		enc['psk'] = 'WPA Personal';
+		enc['psk2'] = 'WPA2 Personal';
+		if (config.services.sae) {
+			enc['sae-mixed'] = 'WPA2/WPA3 Personal';
+			enc['sae'] = 'WPA3 Personal';
+		}
 	}
 
 	var select = removeOptions(element);
@@ -1384,9 +1394,18 @@ function showconfig() {
 			if ((config[radios[i]].wlan_hwmode).includes('ac')) { wifidesc1 = ' 5, ' + config[radios[i]].wlan_hwmode + ','; }
 			if ((config[radios[i]].wlan_hwmode).includes('ax')) { wifidesc1 = ' 6, ' + config[radios[i]].wlan_hwmode + ','; }
 			if ((config[radios[i]].wlan_hwmode).includes('be')) { wifidesc1 = ' 7, ' + config[radios[i]].wlan_hwmode + ','; }
-			if (is_radio2) { wifidesc2.push('2.4'); }
-			if (is_radio5) { wifidesc2.push('5'); }
-			if (is_radio6) { wifidesc2.push('6'); }
+			if (is_radio2) {
+				wifidesc2.push('2.4');
+				config[radios[i]]['is6'] = false;
+			}
+			if (is_radio5) {
+				wifidesc2.push('5');
+				config[radios[i]]['is6'] = false;
+			}
+			if (is_radio6) {
+				wifidesc2.push('6');
+				config[radios[i]]['is6'] = true;
+			}
 			config[radios[i]]['description'] = 'Wi-Fi' + wifidesc1 + (wifidesc2.length > 0 ? ' ' + wifidesc2.sort().join('/') + ' GHz' : '');
 			setValue('radio_' + i, config[radios[i]]['description']);
 
@@ -1432,7 +1451,7 @@ function showconfig() {
 			}
 			setValue('wlan_txpower_' + i, txpower);
 			setValue('wlan_ssid_' + i, config[radios[i]].wlan_ssid);
-			setEncryption('wlan_encryption_' + i, config[radios[i]].wlan_encryption);
+			setEncryption('wlan_encryption_' + i, config[radios[i]].is6, config[radios[i]].wlan_encryption);
 			setValue('wlan_key_' + i, config[radios[i]].wlan_key);
 			enableWlanEncryption('', config[radios[i]].wlan_encryption, '_' + i);
 			setValue('wlan_isolate_' + i, config[radios[i]].wlan_isolate == 1);
@@ -3427,7 +3446,7 @@ var wifiscanresults;
 
 function showsitesurvey() {
 	ubus_call('easyconfig', 'wlansifaces', {}, function(data) {
-		var n = data.res.length;
+		var n = data.result.length;
 		if (n == 0 && !wifiscanresults) {
 			setValue('div_sitesurvey_content', '<div class="alert alert-warning">Brak sieci bezprzewodowych lub Wi-Fi jest wyłączone</div>');
 		} else {
@@ -8013,7 +8032,7 @@ function networkdetails(data) {
 		setValue('div_network_wlan_enabled_desc1_' + i, msg);
 		setValue('div_network_wlan_enabled_desc2_' + i, msg);
 		setValue('network_wlan_ssid_' + i, vap.ssid);
-		setEncryption('network_wlan_encryption_' + i, vap.encryption);
+		setEncryption('network_wlan_encryption_' + i, vap.is6, vap.encryption);
 		setValue('network_wlan_key_' + i, vap.key);
 		enableWlanEncryption('network_', vap.encryption, '_' + i);
 		setValue('network_wlan_isolate_' + i, vap.isolate == 1);

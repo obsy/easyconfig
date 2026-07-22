@@ -2544,7 +2544,7 @@ show_networks() {
 ##############################################################################
 
 wlansifaces() {
-	echo '{"res":['
+	echo '{"result":['
 	T=$(ubus call network.wireless status | jsonfilter -q -e '@.*.interfaces[0]' | jsonfilter -q -a -e '@[@.config.mode="ap"].ifname' | xargs)
 	[ -n "$T" ] && T='"'${T// /\",\"}'"'
 	echo "$T"
