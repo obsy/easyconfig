@@ -229,6 +229,10 @@ function proofreadLengthRange(input, min, max) {
 	proofreadText(input, function(text){return validateLengthRange(text,min,max)}, 0);
 }
 
+function proofreadBytesLengthRange(input, min, max) {
+	proofreadText(input, function(text){return validateBytesLengthRange(text,min,max)}, 0);
+}
+
 function proofreadNumericRange(input, min, max) {
 	proofreadText(input, function(text){return validateNumericRange(text,min,max)}, 0);
 }
@@ -287,6 +291,18 @@ function validateLengthRange(text, min, max) {
 		errorcode = 1;
 	}
 	if(text.length > max) {
+		errorcode = 2;
+	}
+	return errorcode;
+}
+
+function validateBytesLengthRange(text, min, max) {
+	var errorcode = 0;
+	var textbytes = new TextEncoder().encode(text).length;
+	if(textbytes < min) {
+		errorcode = 1;
+	}
+	if(textbytes > max) {
 		errorcode = 2;
 	}
 	return errorcode;
@@ -1944,8 +1960,8 @@ function saveconfig() {
 			showMsg('Błąd w polu ' + getLabelText('wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i), true);
 			return;
 		}
-		if (validateLengthRange(wlan_ssid, 1, 32) != 0) {
-			showMsg('Błąd w polu ' + getLabelText('wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Nazwa Wi-Fi nie może być dłuższa niż 32 znaki', true);
+		if (validateBytesLengthRange(wlan_ssid, 1, 32) != 0) {
+			showMsg('Błąd w polu ' + getLabelText('wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Nazwa Wi-Fi nie może być dłuższa niż 32 bajty<br>Niektóre znaki (np. polskie litery lub emoji) zajmują więcej niż 1 bajt', true);
 			return;
 		}
 		if (config[radios[i]].wlan_ssid != wlan_ssid) {
@@ -8267,8 +8283,8 @@ function savenetwork() {
 			showError('network_error', 'network_wlan_ssid_' + i, 'Błąd w polu ' + getLabelText('network_wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i));
 			return;
 		}
-		if (validateLengthRange(wlan_ssid, 1, 32) != 0) {
-			showError('network_error', 'network_wlan_ssid_' + i, 'Błąd w polu ' + getLabelText('network_wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Nazwa Wi-Fi nie może być dłuższa niż 32 znaki');
+		if (validateBytesLengthRange(wlan_ssid, 1, 32) != 0) {
+			showError('network_error', 'network_wlan_ssid_' + i, 'Błąd w polu ' + getLabelText('network_wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Nazwa Wi-Fi nie może być dłuższa niż 32 bajty<br>Niektóre znaki (np. polskie litery lub emoji) zajmują więcej niż 1 bajt');
 			return;
 		}
 		if (vap.ssid != wlan_ssid) {
