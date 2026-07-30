@@ -17,6 +17,7 @@
 	<script src="/easyconfig/manuf.js?v=1"></script>
 	<script src="/easyconfig/dns.js?v=1"></script>
 	<script src="/easyconfig/feather.min.js?v=1"></script>
+	<script src="/easyconfig/uqr.js?v=1"></script>
 </head>
 <body>
 
@@ -549,8 +550,9 @@
 						<div class="slider round"></div>
 					</label>
 					</div>
-					<div class="col-xs-6 control-label" id="div_wlan_copy_link_idx" style="display:none;">
-						<span class="click" onclick="copywireless('', '_idx');">kopiuj z poprzedniej sieci</span>
+					<div class="col-xs-6 control-label labelright">
+						<span id="wlan_copy_link_idx" class="click" onclick="copywireless('', '_idx');" title="kopiuj dane z poprzedniej sieci"><i data-feather="copy"></i></span>
+						<span class="click" onclick="qr('', '_idx');" title="kod QR do połączenia"><i data-feather="qrcode"></i></span>
 					</div>
 				</div>
 			</div>
@@ -1739,12 +1741,6 @@
 
 </div>
 
-<div id="div_msg" class="modal">
-	<div id="msgtxt" class="modal-content text-center">
-		Proszę czekać...
-	</div>
-</div>
-
 <div id="div_hostname" class="modal">
 	<div class="row modal-content">
 		<div class="text-center space">
@@ -2774,8 +2770,9 @@
 						<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted"><span id="div_network_wlan_enabled_desc1_idx"></span></small></em></span>
 						<div class="visible-xs"><em><small class="form-text text-muted"><span id="div_network_wlan_enabled_desc2_idx"></span></small></em></div>
 						</div>
-						<div class="col-xs-6 control-label" id="div_network_wlan_copy_link_idx" style="display:none;">
-							<span class="click" onclick="copywireless('network_', '_idx');">kopiuj z poprzedniej sieci</span>
+						<div class="col-xs-6 control-label labelright">
+							<span id="network_wlan_copy_link_idx" class="click" onclick="copywireless('network_', '_idx');" title="kopiuj dane z poprzedniej sieci"><i data-feather="copy"></i></span>
+							<span class="click" onclick="qr('network_', '_idx');" title="kod QR do połączenia"><i data-feather="qrcode"></i></span>
 						</div>
 					</div>
 				</div>
@@ -2889,6 +2886,12 @@
 			<input type="button" class="btn btn-default" onclick="cron_cancel();" value="Anuluj">
 			<input type="button" id="cron_btn_primary" class="btn btn-primary" value="Ustaw">
 		</div>
+	</div>
+</div>
+
+<div id="div_msg" class="modal">
+	<div id="msgtxt" class="modal-content text-center">
+		Proszę czekać...
 	</div>
 </div>
 

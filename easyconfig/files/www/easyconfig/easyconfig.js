@@ -599,8 +599,8 @@ function getValue(element) {
 	}
 }
 
-function setDisplay(element, show) {
-	document.getElementById(element).style.display = (show?"block":"none");
+function setDisplay(element, show, display = 'block') {
+	document.getElementById(element).style.display = (show ? display : 'none');
 }
 
 function addClasses(element, classes) {
@@ -1378,7 +1378,7 @@ function showconfig() {
 
 			var html = ('<div>' + document.getElementById('div_radio_template').innerHTML + '</div>').replaceAll('_idx', '_' + i);
 			document.getElementById('div_radio_content').insertAdjacentHTML('beforeend', html);
-			if (i > 0) { setDisplay('div_wlan_copy_link_' + i, true); }
+			setDisplay('wlan_copy_link_' + i, i > 0, 'inline-block');
 
 			var select = removeOptions('wlan_channel_' + i);
 			var obj = config[radios[i]].wlan_channels;
@@ -1505,7 +1505,7 @@ function showconfig() {
 
 		// nightmode / sunwait
 		setDisplay('div_nightmode_led_auto', config.services.sunwait);
-		if (config.services.gps) { document.getElementById('btn_nightmode_locationfromgps').style.display = 'inline-block'; }
+		setDisplay('btn_nightmode_locationfromgps', config.services.gps, 'inline-block');
 
 		// modembands
 		setDisplay('link_modembands4g', config.services.modemband4g);
@@ -1592,6 +1592,52 @@ function copywireless(prefix, idx) {
 	setValue(prefix + 'wlan_hidden' + idx, getValue(prefix + 'wlan_hidden_' + previdx));
 	setValue(prefix + 'wlan_macaddr' + idx, getValue(prefix + 'wlan_macaddr_' + previdx));
 	enableWlanEncryption(prefix, getValue(prefix + 'wlan_encryption_' + previdx), idx);
+}
+
+function qrEscape(s) {
+	if (s == null)
+		return '';
+	return String(s).replace(/([\\;,:"])/g, '\\$1');
+}
+
+function qr(prefix, idx) {
+	var idx = parseInt(idx.replace('_', ''));
+	var ssid = getValue(prefix + 'wlan_ssid_' + idx);
+	if (!ssid) {
+		showMsg('Brak nazwy sieci Wi-Fi', true);
+		return;
+	}
+	var key = getValue(prefix + 'wlan_key_' + idx);
+	var encryption = 'nopass';
+	switch (getValue(prefix + 'wlan_encryption_' + idx)) {
+		case 'psk':
+		case 'psk2':
+			encryption = 'WPA';
+			break;
+		case 'sae':
+		case 'sae-mixed':
+			encryption = 'SAE';
+			break;
+		default:
+			encryption = 'nopass';
+			key = 'nokey';
+	}
+	var hidden = getValue(prefix + 'wlan_hidden_' + idx) ? 'true' : 'false';
+	var data = 'WIFI:T:' + encryption + ';S:' + qrEscape(ssid) + ';P:' + qrEscape(key) + ';H:' + hidden + ';';
+
+	var options = {
+		pixelSize: 8,
+		margin: 1,
+		ecLevel: 'M',
+		whiteColor: 'white',
+		blackColor: 'black'
+	};
+	var svg = renderQRSVG(data, options);
+
+	showMsg('<div class="row">' +
+		'<div class="col-xs-12 text-center space">Zeskanuj kod QR aby połączyć się z siecią Wi-Fi<br>' + ssid + '</div>' +
+		'<div class="col-xs-12 text-center">' + svg.trim() + '</div>' +
+		'</div>', false);
 }
 
 function saveconfig() {
@@ -6122,12 +6168,12 @@ function showvpn() {
 				if (sorted[idx].up) {
 					if (sorted[idx].proto == 'zerotier') {
 						html += '<div class="col-xs-7 col-sm-4"><span style="color:green">aktywny</span></div>';
-						html += '<div class="col-xs-2 col-sm-1">';
-						html += '<span class="click" onclick="vpnstatuszerotier(\'' + sorted[idx].section + '\');" title="status"><i data-feather="info"></i></span>&nbsp;';
+						html += '<div class="col-xs-2 col-sm-1 labelright">';
+						html += '<span class="click" onclick="vpnstatuszerotier(\'' + sorted[idx].section + '\');" title="status"><i data-feather="info"></i></span>';
 					} else {
 						html += '<div class="col-xs-7 col-sm-4"><span style="color:green">aktywny</span>, ' + formatDuration(sorted[idx].uptime, false) + ' (od ' + getDateTimeSince(sorted[idx].uptime) + ')</div>';
-						html += '<div class="col-xs-2 col-sm-1">';
-						html += '<span class="click" onclick="vpnstatus(\'' + sorted[idx].interface + '\');" title="status"><i data-feather="info"></i></span>&nbsp;';
+						html += '<div class="col-xs-2 col-sm-1 labelright">';
+						html += '<span class="click" onclick="vpnstatus(\'' + sorted[idx].interface + '\');" title="status"><i data-feather="info"></i></span>';
 					}
 					html += '<span class="click" onclick="downvpn(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');" title="rozłącz"><i data-feather="power"></i></span>';
 					html += '</div>';
@@ -6139,7 +6185,7 @@ function showvpn() {
 						html += '</div>';
 					} else {
 						html += '<div class="col-xs-7 col-sm-4">wyłączony</div>';
-						html += '<div class="col-xs-2 col-sm-1">';
+						html += '<div class="col-xs-2 col-sm-1 labelright">';
 						html += '<span class="click" onclick="upvpn(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');" title="połącz"><i data-feather="power"></i></span>';
 						html += '</div>';
 					}
@@ -7285,7 +7331,7 @@ var adblock_lists;
 function showadblock() {
 	ubus_call('easyconfig', 'adblock', {}, function(data) {
 		if (config.services.adblock) {
-			document.getElementById('btn_adblock_checkdomain').style.display = 'inline-block';
+			setDisplay('btn_adblock_checkdomain', true, 'inline-block');
 			setDisplay('div_adblock_adblock', true);
 			var tmp = (data.domains == '' ? '-' : data.domains);
 			if (data.domains == '0') {
@@ -7947,7 +7993,7 @@ function shownetworks() {
 					html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\'); return false;">' + sorted[idx].lan_clients + ' &rarr;</a></div>';
 				}
 				if (has_wireless) {
-					html += '<div class="col-xs-1"><span class="click" onclick="networkswifitoggle(\'' + sorted[idx].section + '\');"><span title="zmień stan Wi-Fi"><i data-feather="toggle"></i></span></div>';
+					html += '<div class="col-xs-1 labelright"><span class="click" onclick="networkswifitoggle(\'' + sorted[idx].section + '\');"><span title="zmień stan Wi-Fi"><i data-feather="toggle"></i></span></div>';
 				}
 				html += '</div>';
 			}
@@ -8037,7 +8083,7 @@ function networkdetails(data) {
 
 		var html = ('<div>' + document.getElementById('div_network_wireless_template').innerHTML + '</div>').replaceAll('_idx', '_' + i);
 		document.getElementById('div_network_interfaces_content').insertAdjacentHTML('beforeend', html);
-		if (i > 0) { setDisplay('div_network_wlan_copy_link_' + i, true); }
+		setDisplay('network_wlan_copy_link_' + i, i > 0, 'inline-block');
 		setValue('network_radio_' + i, config[radios[i]].description);
 
 		setValue('network_wlan_enabled_' + i, vap.disabled != 1);

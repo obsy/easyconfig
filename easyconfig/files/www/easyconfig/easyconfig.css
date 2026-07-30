@@ -528,3 +528,11 @@ h3 {
   background: #337ab7;
   color: white;
 }
+
+.click + .click {
+    margin-left: 10px;
+}
+
+.labelright {
+    text-align:right !important;
+}
