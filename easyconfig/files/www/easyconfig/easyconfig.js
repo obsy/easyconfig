@@ -6180,8 +6180,8 @@ function showvpn() {
 				} else {
 					if (sorted[idx].pending) {
 						html += '<div class="col-xs-7 col-sm-4">trwa nawiązywanie połączenia</div>';
-						html += '<div class="col-xs-2 col-sm-1">';
-						html += '<span class="click" onclick="downvpn(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');"><span title="rozłącz"><i data-feather="power"></i></span>';
+						html += '<div class="col-xs-2 col-sm-1 labelright">';
+						html += '<span class="click" onclick="downvpn(\'' + sorted[idx].proto + '\',\'' + sorted[idx].interface + '\',\'' + (sorted[idx].section ? sorted[idx].section : '') + '\');" title="rozłącz"><i data-feather="power"></i></span>';
 						html += '</div>';
 					} else {
 						html += '<div class="col-xs-7 col-sm-4">wyłączony</div>';
