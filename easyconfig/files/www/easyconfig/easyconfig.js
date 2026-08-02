@@ -1579,7 +1579,7 @@ function showconfig() {
 
 		setValue('datarec_period', config.datarec_period);
 		setValue('firewall_flowoffloading', config.services.flowoffloading);
-	})
+	});
 }
 
 function copywireless(prefix, idx) {
@@ -2466,7 +2466,7 @@ function showstatus() {
 				}
 				setValue('div_status_mwan3_content', html);
 				setDisplay('div_status_mwan3', true);
-			})
+			});
 		} else {
 			setDisplay('div_status_mwan3', false);
 		}
@@ -2582,7 +2582,7 @@ function modemsettings() {
 		setValue('modemsettings_ussd_raw_input', data.ussd_raw_input == 1);
 		setValue('modemsettings_ussd_raw_output', data.ussd_raw_output);
 		setDisplay('div_modemsettings', true);
-	})
+	});
 }
 
 function modemat() {
@@ -2720,7 +2720,7 @@ function modembands5gnsa() {
 			}
 			setDisplay('div_modembands5gnsa', true);
 		}
-	})
+	});
 }
 
 function savemodembands5gnsa() {
@@ -2778,7 +2778,7 @@ function modembands5gsa() {
 			}
 			setDisplay('div_modembands5gsa', true);
 		}
-	})
+	});
 }
 
 function savemodembands5gsa() {
@@ -3516,7 +3516,7 @@ function showsitesurvey() {
 				ubus_call('easyconfig', 'wifiscan', { 'interface': data.result[idx] }, showsitesurvey_praser);
 			}
 		}
-	})
+	});
 }
 
 function showsitesurvey_praser(data) {
@@ -4256,7 +4256,7 @@ function clientscallback(sortby) {
 			html += '<span id="clients_filterall_week" class="select-option" onclick="clientscallbackfilterall(\'week\');clientscallback(\'\');">z ostatniego tygodnia (0)</span>';
 			html += '<span id="clients_filterall_month" class="select-option" onclick="clientscallbackfilterall(\'month\');clientscallback(\'\');">z ostatnich 30 dni (0)</span>';
 			html += '<span id="clients_filterall_year" class="select-option" onclick="clientscallbackfilterall(\'year\');clientscallback(\'\');">z ostatniego roku (0)</span>';
-			html += '<span id="clients_filterall_all" class="select-option" onclick="clientscallbackfilterall(\'all\');clientscallback(\'\');">wszystko (0)</span></span>';
+			html += '<span id="clients_filterall_all" class="select-option" onclick="clientscallbackfilterall(\'all\');clientscallback(\'\');">wszystko (0)</span>';
 			html += '</div>'
 		}
 		html += '<div class="col-xs-12">';
@@ -4298,7 +4298,7 @@ function clientscallback(sortby) {
 
 		if (filterby == 'active' && total > 0) {
 			html += '<div class="row"><div id="div_clients_showpie" class="col-xs-12 text-right click"><span class="click" title="ukryj wykres" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span></div></div>';
-			html += '<div id="div_clients_pie"><canvas id="clients_pie" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</em></small></div></div>';
+			html += '<div id="div_clients_pie"><canvas id="clients_pie" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</small></em></div></div>';
 			html += '<div id="div_clients_pie_tooltip" class="tooltip"></div>';
 		}
 
@@ -4745,7 +4745,7 @@ function hostinfo(id) {
 	}
 	html += createRowForModal('Pierwszy raz widziany', formatDateTime(host.first_seen));
 	if (!host.active) {
-		html += createRowForModal('Ostatni raz widziany', formatDateTime(host.last_seen) + '</span><span class="visible-xs oneline"></span><span>' + ' (' + formatDuration(parseInt((new Date() - new Date((host.last_seen).substring(0,4), (host.last_seen).substring(4,6) - 1, (host.last_seen).substring(6,8), (host.last_seen).substring(8,10), (host.last_seen).substring(10,12), (host.last_seen).substring(12,14)))/1000), false) + ' temu)' + '</span>');
+		html += createRowForModal('Ostatni raz widziany', formatDateTime(host.last_seen) + '<span class="visible-xs oneline"></span><span>' + ' (' + formatDuration(parseInt((new Date() - new Date((host.last_seen).substring(0,4), (host.last_seen).substring(4,6) - 1, (host.last_seen).substring(6,8), (host.last_seen).substring(8,10), (host.last_seen).substring(10,12), (host.last_seen).substring(12,14)))/1000), false) + ' temu)' + '</span>');
 	}
 	html += createRowForModal('Sieć', host.network == '' ? '-' : escapeHTML(host.network));
 	if (remote_clients && remote_hosts && host.active) {
@@ -5357,7 +5357,7 @@ function queriescallback(sortby, order) {
 
 function queriesmenu(domain) {
 	var html = domain + '<hr>';
-	html += '<p><a span class="click" onclick="closeMsg();gotoadblock(\'' + domain + '\');">przenieś do blokady domen</span></p>';
+	html += '<p><span class="click" onclick="closeMsg();gotoadblock(\'' + domain + '\');">przenieś do blokady domen</span></p>';
 	showMsg(html);
 }
 
@@ -6197,7 +6197,7 @@ function showvpn() {
 		} else {
 			setValue('div_vpn_content', '<div class="alert alert-warning">Brak sieci VPN</div>');
 		}
-	})
+	});
 }
 
 function vpnstatus(interface) {
@@ -6341,7 +6341,7 @@ function vpndetails(proto, interface, section) {
 			setValue('vpn_zerotier_network', data.id);
 			setDisplay('div_vpn_zerotier', true);
 		}
-	})
+	});
 }
 
 function vpntype(proto) {
@@ -7593,7 +7593,7 @@ function shownightmode() {
 		} else {
 			setValue('nightmode_led_auto_note', '');
 		}
-	})
+	});
 }
 
 function savenightmode() {
@@ -7851,7 +7851,7 @@ function showwol() {
 			setValue('div_wol_content', '<div class="alert alert-warning">Brak urządzeń do wybudzenia</div>');
 			document.getElementById('btn_wol_wakeupall').disabled = true;
 		}
-	})
+	});
 }
 
 function woldetails(data) {
@@ -7993,7 +7993,7 @@ function shownetworks() {
 					html += '<div class="col-xs-3"><a href="#" class="click" onclick="btn_pages(\'clients\'); return false;">' + sorted[idx].lan_clients + ' &rarr;</a></div>';
 				}
 				if (has_wireless) {
-					html += '<div class="col-xs-1 labelright"><span class="click" onclick="networkswifitoggle(\'' + sorted[idx].section + '\');"><span title="zmień stan Wi-Fi"><i data-feather="toggle"></i></span></div>';
+					html += '<div class="col-xs-1 labelright"><span class="click" onclick="networkswifitoggle(\'' + sorted[idx].section + '\');" title="zmień stan Wi-Fi"><i data-feather="toggle"></i></span></div>';
 				}
 				html += '</div>';
 			}
@@ -8036,7 +8036,7 @@ function shownetworks() {
 		document.getElementById('btn_network_new').addEventListener('click', function() {
 			networkdetails(btoa(JSON.stringify(newnetwork)));
 		});
-	})
+	});
 }
 
 function networkswifitoggle(section) {
@@ -8499,7 +8499,7 @@ function cron_display(action, onclickprimary) {
 	ubus_call('file', 'exec', { 'command': 'easyconfig_cron_helper.sh', 'params': [ 'get', 'wifi' ] }, function(data) {
 		cron_decode(data.stdout);
 		setDisplay('div_cron', true);
-	})
+	});
 }
 
 function cron_decode(data) {
@@ -8608,7 +8608,7 @@ function diagnostics() {
 		} else {
 			showMsg(createRowForModal('Status połączenia z internetem', resnotok));
 		}
-	})
+	});
 }
 
 /*****************************************************************************/
