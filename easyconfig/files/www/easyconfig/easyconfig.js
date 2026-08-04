@@ -2808,7 +2808,7 @@ function closemodembands5gsa() {
 }
 
 function modem_simslot_save() {
-	showDialog('UWAGA: zmiana aktywnego slotu SIM spowoduje rozłaczenie połączenia z internetem. Zmienić slot?', 'Nie', 'Tak', oksimslotchange);
+	showDialog('UWAGA: zmiana aktywnego slotu SIM spowoduje rozłączenie połączenia z internetem. Zmienić slot?', 'Nie', 'Tak', oksimslotchange);
 }
 
 function oksimslotchange() {
