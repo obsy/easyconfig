@@ -1072,7 +1072,7 @@ function login() {
 			ubus_error(data.error.code);
 		} else {
 			if (data.result[0] === 0) {
-				if (system_pass == '12345678') { showError('div_security', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
+				if (system_pass == '12345678') { showError('div_securitymsg', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
 				loginok(data.result[1], false);
 			} else {
 				showMsg('Błąd logowania!', true);
@@ -2133,27 +2133,11 @@ function saveconfig() {
 		cmd.push('wifi');
 	}
 
-	// password
-	var pass1 = getValue('password1');
-	var pass2 = getValue('password2');
-	if (pass1 != '') {
-		if (pass1 != pass2) {
-			showMsg('Hasła nie są takie same!', true);
-			return;
-		}
-		cmd.push('(echo "' + escapeShell(pass1) + '"; sleep 1; echo "' + escapeShell(pass1) + '") | passwd root');
-	}
-
-	execute(cmd, function(){
-		cleanField('password1');
-		cleanField('password2');
-		if (pass1 == '12345678') { showError('div_security', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
-		showconfig();
-	});
+	execute(cmd, showconfig);
 }
 
 function showstatistics() {
-	var w = window.open('http://dl.eko.one.pl/cgi-bin/router.cgi?token=' + config.services.statistics.token, '_blank');
+	var w = window.open('https://dl.eko.one.pl/cgi-bin/router.cgi?token=' + config.services.statistics.token, '_blank');
 	w.focus();
 }
 
@@ -8610,6 +8594,48 @@ function diagnostics() {
 		}
 	});
 }
+/*****************************************************************************/
+
+function showsecurity() {
+	ubus_call('uci', 'get', { config: 'dropbear', section: 'main' }, function(data) {
+		setValue('security_sshenable', data.values['enable'] == '1');
+		setValue('security_sshpasswordauth', data.values['PasswordAuth'] == 'on' || data.values['PasswordAuth'] == '1');
+		setValue('security_sshport', data.values['Port']);
+	});
+}
+
+function savesecurity() {
+	var tmp = getValue('security_sshport');
+	if (validateNumericRange(tmp, 0, 65535) != 0) {
+		showMsg('Błąd w polu ' + getLabelText('security_sshport'), true);
+		return;
+	}
+
+	var pass1 = getValue('password1');
+	var pass2 = getValue('password2');
+	if (pass1 != '') {
+		if (pass1 != pass2) {
+			showMsg('Hasła nie są takie same!', true);
+			return;
+		}
+	}
+
+	var cmd = [];
+	if (pass1 != '') {
+		cmd.push('(echo "' + escapeShell(pass1) + '"; sleep 1; echo "' + escapeShell(pass1) + '") | passwd root');
+	}
+	cmd.push('uci set dropbear.main.enable=' + (getValue('security_sshenable') ? '1' : '0'));
+	cmd.push('uci set dropbear.main.PasswordAuth=' + (getValue('security_sshpasswordauth') ? 'on' : 'off'));
+	cmd.push('uci set dropbear.main.Port=' + getValue('security_sshport'));
+	cmd.push('uci commit dropbear');
+	cmd.push('/etc/init.d/dropbear restart');
+	execute(cmd, function() {
+		cleanField('password1');
+		cleanField('password2');
+		if (pass1 == '12345678') { showError('div_securitymsg', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
+		showsecurity();
+	});
+}
 
 /*****************************************************************************/
 
@@ -8639,6 +8665,7 @@ function btn_pages(page) {
 	setDisplay('div_nightmode', (page == 'nightmode'));
 	setDisplay('div_gps', (page == 'gps'));
 	setDisplay('div_wol', (page == 'wol'));
+	setDisplay('div_security', (page == 'security'));
 
 	var clearid = null;
 	function waitForData(callback) {
@@ -8722,6 +8749,10 @@ function btn_pages(page) {
 
 	if (page == 'wol') {
 		showwol();
+	}
+
+	if (page == 'security') {
+		showsecurity();
 	}
 
 	if (page == 'logout') {

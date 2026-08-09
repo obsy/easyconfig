@@ -56,6 +56,7 @@
 	<div id="menu_luci" style="display:none;">
 		<a href="/cgi-bin/luci" target="_blank"><i data-feather="external-link" class="iconwithtext"></i>LuCI</a>
 	</div>
+	<a href="#" onclick="btn_pages('security'); return false;"><i data-feather="lock" class="iconwithtext"></i>Bezpieczeństwo</a>
 	<a href="#" onclick="btn_pages('logout'); return false;"><i data-feather="log-out" class="iconwithtext"></i>Wyloguj</a>
 </div>
 
@@ -107,7 +108,7 @@
 		<div class="col-xs-2"></div>
 	</div>
 
-	<div class="alert alert-danger text-center" id="div_security" style="display:none"></div>
+	<div class="alert alert-danger text-center" id="div_securitymsg" style="display:none"></div>
 
 	<div id="div_status" style="display:none;">
 
@@ -636,20 +637,6 @@
 
 	<h3 class="section">System</h3>
 	<form class="form-horizontal">
-		<div class="form-group">
-			<label for="password1" class="col-xs-4 col-sm-3 control-label click" onclick="showPassword('password1');">Nowe hasło</label>
-			<div class="col-xs-8 col-sm-9">
-			<input id="password1" type="password" class="form-control">
-			</div>
-		</div>
-
-		<div class="form-group">
-			<label for="password2" class="col-xs-4 col-sm-3 control-label click" onclick="showPassword('password2');">Potwierdź hasło</label>
-			<div class="col-xs-8 col-sm-9">
-			<input id="password2" type="password" class="form-control">
-			</div>
-		</div>
-
 		<div class="form-group">
 			<label for="system_hostname" class="col-xs-4 col-sm-3 control-label">Nazwa systemu</label>
 			<div class="col-xs-8 col-sm-9">
@@ -1737,6 +1724,67 @@
 		</div>
 	</div>
 
+	<div id="div_security" style="display:none;">
+		<h3 class="section">Hasło</h3>
+
+		<div class="alert alert-info text-center">
+			Hasło jest wspólne dla interfejsu graficznego oraz SSH
+		</div>
+		<form class="form-horizontal">
+			<div class="form-group">
+				<label for="password1" class="col-xs-4 col-sm-3 control-label click" onclick="showPassword('password1');">Nowe hasło</label>
+				<div class="col-xs-8 col-sm-9">
+				<input id="password1" type="password" class="form-control">
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="password2" class="col-xs-4 col-sm-3 control-label click" onclick="showPassword('password2');">Potwierdź hasło</label>
+				<div class="col-xs-8 col-sm-9">
+				<input id="password2" type="password" class="form-control">
+				</div>
+			</div>
+
+			<h3 class="section">SSH</h3>
+			<div class="form-group" id="div_security_sshenable">
+				<label for="security_sshenable" class="col-xs-4 col-sm-3 control-label">Włączone</label>
+				<div class="col-xs-8 col-sm-9">
+				<label class="switch">
+					<input id="security_sshenable" type="checkbox">
+					<div class="slider round"></div>
+				</label>
+				<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted">wyłączenie uniemożliwia logowanie przez protokół SSH</small></em></span>
+				<div class="visible-xs"><em><small class="form-text text-muted">wyłączenie uniemożliwia logowanie przez protokół SSH</small></em></div>
+				</div>
+			</div>
+
+			<div class="form-group" id="div_security_sshpasswordauth">
+				<label for="security_sshpasswordauth" class="col-xs-4 col-sm-3 control-label">Logowanie przy pomocy hasła</label>
+				<div class="col-xs-8 col-sm-9">
+				<label class="switch">
+					<input id="security_sshpasswordauth" type="checkbox">
+					<div class="slider round"></div>
+				</label>
+				<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted">po wyłączeniu możliwe jest logowanie tylko przy pomocy kluczy</small></em></span>
+				<div class="visible-xs"><em><small class="form-text text-muted">po wyłączeniu możliwe jest logowanie tylko przy pomocy kluczy</small></em></div>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="security_sshport" class="col-xs-4 col-sm-3 control-label">Port</label>
+				<div class="col-xs-8 col-sm-9">
+					<input id="security_sshport" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);"">
+				</div>
+			</div>
+		</form>
+
+		<h3 class="section"></h3>
+		<div class="text-center">
+			<input type="button" class="btn btn-default" onclick="showsecurity();" value="Odśwież">
+			<input type="button" class="btn btn-primary" onclick="savesecurity();" value="Zapisz zmiany">
+		</div>
+
+	</div>
 </div>
 
 </div>
