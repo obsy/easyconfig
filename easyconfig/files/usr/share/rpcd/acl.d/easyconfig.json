@@ -3,21 +3,19 @@
 		"description": "Easyconfig access role",
 		"read": {
 			"ubus": {
-				"*": ["*"]
+				"*": [ "*" ]
 			},
-			"uci": {
-				"get": [ "dropbear" ]
-			},
+			"uci": [ "dropbear" ],
 			"file": {
-				"*": ["*"]
+				"*": [ "*" ]
 			}
 		},
 		"write": {
 			"ubus": {
-				"*": ["*"]
+				"*": [ "*" ]
 			},
 			"file": {
-				"*": ["*"]
+				"*": [ "*" ]
 			}
 		}
 	}
