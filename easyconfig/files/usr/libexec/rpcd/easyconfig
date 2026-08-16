@@ -2553,6 +2553,59 @@ wlansifaces() {
 
 ##############################################################################
 
+findfirewallredirect() {
+	local SECS=$(uci show firewall | awk -F[.=] '/=redirect$/{print $2}')
+	for SEC in $SECS; do
+		local p1=$(uci -q get firewall.${SEC}.src)
+		if [ "x${p1}" = "xwan" ]; then
+			local p2=$(uci -q get firewall.${SEC}.dest)
+			if [ "x${p2}" = "xlan" ]; then
+				local p3=$(uci -q get firewall.${SEC}.dest_port)
+				if [ "x${p3}" = "x$1" ]; then
+					local PORT=$2
+					local SECTION=$3
+					eval "$SECTION='$SEC'"
+					eval "$PORT='$(uci -q get firewall.${SEC}.src_dport)'"
+					break
+				fi
+			fi
+		fi
+	done
+}
+
+security() {
+	echo '{"result":{'
+	echo '"dropbear_enable":"'$(uci -q get dropbear.main.enable)'",'
+	echo '"dropbear_passwordauth":"'$(uci -q get dropbear.main.PasswordAuth)'",'
+	SSHP=$(uci -q get dropbear.main.Port)
+	echo '"dropbear_port":"'$SSHP'",'
+	HTTPP=$(uci -q -d, get uhttpd.main.listen_http | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
+	echo '"uhttpd_listen_http":"'$HTTPP'",'
+	HTTPSP=$(uci -q -d, get uhttpd.main.listen_https | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
+	echo '"uhttpd_listen_https":"'$HTTPSP'",'
+	echo '"system_ttylogin":"'$(uci -q get system.@system[0].ttylogin)'",'
+
+	WANSSHP=""
+	WANSSHSEC=""
+	[ -n "$SSHP" ] && findfirewallredirect $SSHP WANSSHP WANSSHSEC
+	WANHTTPP=""
+	WANHTTPSEC=""
+	[ -n "$HTTPP" ] && findfirewallredirect $HTTPP WANHTTPP WANHTTPSEC
+	WANHTTPSP=""
+	WANHTTPSSEC=""
+	[ -n "$HTTPSP" ] && findfirewallredirect $HTTPSP WANHTTPSP WANHTTPSSEC
+
+	echo '"firewall_wanssh_port":"'$WANSSHP'",'
+	echo '"firewall_wanssh_section":"'$WANSSHSEC'",'
+	echo '"firewall_wanhttp_port":"'$WANHTTPP'",'
+	echo '"firewall_wanhttp_section":"'$WANHTTPSEC'",'
+	echo '"firewall_wanhttps_port":"'$WANHTTPSP'",'
+	echo '"firewall_wanhttps_section":"'$WANHTTPSSEC'"'
+	echo '}}'
+}
+
+##############################################################################
+
 case "$1" in
 	list)
 		echo '{'
@@ -2590,7 +2643,8 @@ case "$1" in
 		echo '"leds":{"action":"string"}',
 		echo '"wol":{}',
 		echo '"wolwakeup":{"section":"string"}',
-		echo '"wlansifaces":{}'
+		echo '"wlansifaces":{}',
+		echo '"security":{}'
 		echo '}'
 	;;
 	call)
@@ -2699,6 +2753,9 @@ case "$1" in
 				;;
 			wlansifaces)
 				wlansifaces
+				;;
+			security)
+				security
 				;;
 		esac
 	;;

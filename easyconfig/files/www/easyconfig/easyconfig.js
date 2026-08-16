@@ -204,6 +204,10 @@ function escapeHTML(str) {
 
 /*****************************************************************************/
 
+function cleanError(e) {
+	proofreadText(document.getElementById(e), function(text){ return 0; }, 0);
+}
+
 function proofreadHost(input) {
 	proofreadText(input, validateHost, 0);
 }
@@ -1672,7 +1676,7 @@ function saveconfig() {
 		if (wan_type == 'static') {
 			if (checkField('wan_ipaddr', validateIP)) {return;}
 			if (checkField('wan_gateway', validateIP)) {return;}
-			proofreadText(document.getElementById('wan_ipaddr'), function(text){ return 0; }, 0);
+			cleanError('wan_ipaddr');
 			if (checkIpType(getValue('wan_ipaddr'), getValue('wan_netmask')) != 1) {
 				proofreadText(document.getElementById('wan_ipaddr'), function(text){ return 0; }, 1);
 				showMsg('Błąd w polu ' + getLabelText('wan_ipaddr') + '<br><br>Adres IP jest spoza zakresu adresacji sieci', true);
@@ -1889,7 +1893,7 @@ function saveconfig() {
 		if (firewall_dmz == '') {
 			cmd.push('uci -q del firewall.dmz');
 		} else {
-			proofreadText(document.getElementById('firewall_dmz'), function(text){ return 0; }, 0);
+			cleanError('firewall_dmz');
 			if (checkIpInLanSubnet(getValue('lan_ipaddr'), config.lan_netmask, firewall_dmz) != 1) {
 				proofreadText(document.getElementById('firewall_dmz'), function(text){ return 0; }, 1);
 				showMsg('Błąd w polu ' + getLabelText('firewall_dmz') + '<br><br>Adres IP jest spoza zakresu adresacji sieci lokalnej', true);
@@ -1906,7 +1910,7 @@ function saveconfig() {
 
 	// lan
 	if (checkField('lan_ipaddr', validateIP)) {return;}
-	proofreadText(document.getElementById('lan_ipaddr'), function(text){ return 0; }, 0);
+	cleanError('lan_ipaddr');
 	if (checkIpType(getValue('lan_ipaddr'), config.lan_netmask) != 1) {
 		proofreadText(document.getElementById('lan_ipaddr'), function(text){ return 0; }, 1);
 		showMsg('Błąd w polu ' + getLabelText('lan_ipaddr') + '<br><br>Adres IP jest spoza zakresu adresacji sieci', true);
@@ -4990,7 +4994,7 @@ function savehostip() {
 		showError('hostip_error', 'hostip_ip', 'Błąd w polu ' + getLabelText('hostip_ip'));
 		return;
 	}
-	proofreadText(document.getElementById('hostip_ip'), function(text){ return 0; }, 0);
+	cleanError('hostip_ip');
 	if (checkIpInLanSubnet(config.lan_ipaddr, config.lan_netmask, ip) != 1) {
 		proofreadText(document.getElementById('hostip_ip'), function(text){ return 0; }, 1);
 		showError('hostip_error', 'hostip_ip', 'Błąd w polu ' + getLabelText('hostip_ip') + '<br><br>Adres IP jest spoza zakresu adresacji sieci');
@@ -6680,7 +6684,7 @@ function saveopenvpn() {
 			return;
 		}
 	}
-	proofreadText(document.getElementById('vpn_openvpn_configtext'), function(text){ return 0; }, 0);
+	cleanError('vpn_openvpn_configtext');
 
 	cancelopenvpn();
 
@@ -6994,7 +6998,7 @@ function savewireguard() {
 				showError('vpn_wireguard_error', 'vpn_wireguard_ip_' + idx, 'Błąd w polu ' + getLabelText('vpn_wireguard_ip_' + idx));
 				return;
 			}
-			proofreadText(document.getElementById('vpn_wireguard_ip_' + idx), function(text){ return 0; }, 0);
+			cleanError('vpn_wireguard_ip_' + idx);
 			if (checkIpType(e.value, getValue('vpn_wireguard_netmask_' + idx)) != 1) {
 				proofreadText(document.getElementById('vpn_wireguard_ip_' + idx), function(text){ return 0; }, 1);
 				showError('vpn_wireguard_error', 'vpn_wireguard_ip_' + idx, 'Błąd w polu ' + getLabelText('vpn_wireguard_ip_' + idx) + '<br><br>Adres IP jest spoza zakresu adresacji sieci');
@@ -7045,7 +7049,7 @@ function savewireguard() {
 					showError('vpn_wireguard_error', 'vpn_wireguard_allowed_ip_' + idx + '_' + idy, 'Błąd w polu ' + getLabelText('vpn_wireguard_allowed_ip_' + idx + '_' + idy));
 					return;
 				}
-				proofreadText(document.getElementById('vpn_wireguard_allowed_ip_' + idx + '_' + idy), function(text){ return 0; }, 0);
+				cleanError('vpn_wireguard_allowed_ip_' + idx + '_' + idy);
 				var ret = checkIpType(e.value, getValue('vpn_wireguard_allowed_netmask_' + idx + '_' + idy));
 				if (ret == -1 || ret == 255) {
 					proofreadText(document.getElementById('vpn_wireguard_allowed_ip_' + idx + '_' + idy), function(text){ return 0; }, 1);
@@ -8177,7 +8181,7 @@ function savenetwork() {
 		showError('network_error', 'network_ipaddr', 'Błąd w polu ' + getLabelText('network_ipaddr'));
 		return;
 	}
-	proofreadText(document.getElementById('network_ipaddr'), function(text){ return 0; }, 0);
+	cleanError('network_ipaddr');
 	if (checkIpType(ipaddr, getValue('network_netmask')) != 1) {
 		proofreadText(document.getElementById('network_ipaddr'), function(text){ return 0; }, 1);
 		showError('network_error', 'network_ipaddr', 'Błąd w polu ' + getLabelText('network_ipaddr') + '<br><br>Adres IP jest spoza zakresu adresacji sieci');
@@ -8597,18 +8601,37 @@ function diagnostics() {
 /*****************************************************************************/
 
 function showsecurity() {
-	ubus_call('uci', 'get', { config: 'dropbear', section: 'main' }, function(data) {
-		setValue('security_sshenable', data.values['enable'] == '1');
-		setValue('security_sshpasswordauth', data.values['PasswordAuth'] == 'on' || data.values['PasswordAuth'] == '1');
-		setValue('security_sshport', data.values['Port']);
+	ubus_call('easyconfig', 'security', {}, function(data) {
+		setValue('dropbear_enable', data.result.dropbear_enable == '1');
+		setValue('dropbear_passwordauth', data.result.dropbear_passwordauth == 'on' || data.result.dropbear_passwordauth == '1');
+		setValue('dropbear_port', data.result.dropbear_port);
+		setValue('firewall_wanssh_port', data.result.firewall_wanssh_port);
+
+		setValue('firewall_wanhttp_port', data.result.firewall_wanhttp_port);
+		setValue('firewall_wanhttps_port', data.result.firewall_wanhttps_port);
+
+		setValue('system_ttylogin', data.result.system_ttylogin == '1');
 	});
 }
 
 function savesecurity() {
-	var tmp = getValue('security_sshport');
+	var tmp = getValue('dropbear_port');
 	if (validateNumericRange(tmp, 0, 65535) != 0) {
-		showMsg('Błąd w polu ' + getLabelText('security_sshport'), true);
+		showMsg('Błąd w polu ' + getLabelText('dropbear_port'), true);
 		return;
+	}
+
+	var labels = [ 'firewall_wanssh_port', 'firewall_wanhttp_port', 'firewall_wanhttps_port' ];
+	for (var idx = 0; idx < labels.length; idx++) {
+		tmp = getValue(labels[idx]);
+		if (tmp) {
+			if (validateNumericRange(tmp, 0, 65535) != 0) {
+				showMsg('Błąd w polu ' + getLabelText(labels[idx]), true);
+				return;
+			}
+		} else {
+			cleanError(labels[idx]);
+		}
 	}
 
 	var pass1 = getValue('password1');
@@ -8620,20 +8643,119 @@ function savesecurity() {
 		}
 	}
 
-	var cmd = [];
-	if (pass1 != '') {
-		cmd.push('(echo "' + escapeShell(pass1) + '"; sleep 1; echo "' + escapeShell(pass1) + '") | passwd root');
-	}
-	cmd.push('uci set dropbear.main.enable=' + (getValue('security_sshenable') ? '1' : '0'));
-	cmd.push('uci set dropbear.main.PasswordAuth=' + (getValue('security_sshpasswordauth') ? 'on' : 'off'));
-	cmd.push('uci set dropbear.main.Port=' + getValue('security_sshport'));
-	cmd.push('uci commit dropbear');
-	cmd.push('/etc/init.d/dropbear restart');
-	execute(cmd, function() {
-		cleanField('password1');
-		cleanField('password2');
-		if (pass1 == '12345678') { showError('div_securitymsg', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
-		showsecurity();
+	ubus_call('easyconfig', 'security', {}, function(data) {
+		var cmd = [];
+		if (pass1 != '') {
+			cmd.push('(echo "' + escapeShell(pass1) + '"; sleep 1; echo "' + escapeShell(pass1) + '") | passwd root');
+		}
+
+		var dropbear_restart_required = false;
+		var firewall_restart_required = false;
+
+		tmp = (getValue('dropbear_enable') ? '1' : '0');
+		if (data.result.dropbear_enable != tmp) {
+			cmd.push('uci set dropbear.main.enable=' + tmp);
+			dropbear_restart_required = true;
+		}
+		tmp = (getValue('dropbear_passwordauth') ? 'on' : 'off');
+		if (data.result.dropbear_passwordauth != tmp) {
+			cmd.push('uci set dropbear.main.PasswordAuth=' + tmp);
+			dropbear_restart_required = true;
+		}
+		tmp = getValue('dropbear_port');
+		if (data.result.dropbear_port != tmp) {
+			cmd.push('uci set dropbear.main.Port=' + tmp);
+			if (data.result.firewall_wanssh_section) {
+				cmd.push('uci set firewall.' + data.result.firewall_wanssh_section + '.dest_port=' + tmp);
+				firewall_restart_required = true;
+			}
+			dropbear_restart_required = true;
+		}
+
+		tmp = getValue('firewall_wanssh_port');
+		if (!tmp && data.result.firewall_wanssh_section) {
+			cmd.push('uci -q del firewall.' + data.result.firewall_wanssh_section);
+			firewall_restart_required = true;
+		}
+		if (tmp && data.result.firewall_wanssh_port != tmp) {
+			var section = data.result.firewall_wanssh_section;
+			if (!section) {
+				cmd.push('uci add firewall redirect');
+				section = '@redirect[-1]';
+				cmd.push('uci set firewall.' + section + '.name=wan_ssh');
+				cmd.push('uci set firewall.' + section + '.enabled=1');
+				cmd.push('uci set firewall.' + section + '.src=wan');
+				cmd.push('uci add_list firewall.' + section + '.proto=tcp');
+				cmd.push('uci set firewall.' + section + '.dest=lan');
+			}
+			cmd.push('uci set firewall.' + section + '.src_dport=' + tmp);
+			cmd.push('uci set firewall.' + section + '.dest_port=' + getValue('dropbear_port'));
+			firewall_restart_required = true;
+		}
+
+		tmp = getValue('firewall_wanhttp_port');
+		if (!tmp && data.result.firewall_wanhttp_section) {
+			cmd.push('uci -q del firewall.' + data.result.firewall_wanhttp_section);
+			firewall_restart_required = true;
+		}
+		if (tmp && data.result.firewall_wanhttp_port != tmp) {
+			var section = data.result.firewall_wanhttp_section;
+			if (!section) {
+				cmd.push('uci add firewall redirect');
+				section = '@redirect[-1]';
+				cmd.push('uci set firewall.' + section + '.name=wan_http');
+				cmd.push('uci set firewall.' + section + '.enabled=1');
+				cmd.push('uci set firewall.' + section + '.src=wan');
+				cmd.push('uci add_list firewall.' + section + '.proto=tcp');
+				cmd.push('uci set firewall.' + section + '.dest=lan');
+			}
+			cmd.push('uci set firewall.' + section + '.src_dport=' + tmp);
+			cmd.push('uci set firewall.' + section + '.dest_port=' + data.result.uhttpd_listen_http);
+			firewall_restart_required = true;
+		}
+		tmp = getValue('firewall_wanhttps_port');
+		if (!tmp && data.result.firewall_wanhttps_section) {
+			cmd.push('uci -q del firewall.' + data.result.firewall_wanhttps_section);
+			firewall_restart_required = true;
+		}
+		if (tmp && data.result.firewall_wanhttps_port != tmp) {
+			var section = data.result.firewall_wanhttps_section;
+			if (!section) {
+				cmd.push('uci add firewall redirect');
+				section = '@redirect[-1]';
+				cmd.push('uci set firewall.' + section + '.name=wan_https');
+				cmd.push('uci set firewall.' + section + '.enabled=1');
+				cmd.push('uci set firewall.' + section + '.src=wan');
+				cmd.push('uci add_list firewall.' + section + '.proto=tcp');
+				cmd.push('uci set firewall.' + section + '.dest=lan');
+			}
+			cmd.push('uci set firewall.' + section + '.src_dport=' + tmp);
+			cmd.push('uci set firewall.' + section + '.dest_port=' + data.result.uhttpd_listen_https);
+			firewall_restart_required = true;
+		}
+
+		tmp = (getValue('system_ttylogin') ? '1' : '0');
+		if (data.result.system_ttylogin != tmp) {
+			cmd.push('uci set system.@system[0].ttylogin=' + tmp);
+			cmd.push('/etc/init.d/system restart');
+		}
+
+		if (dropbear_restart_required || firewall_restart_required) {
+			cmd.push('uci commit');
+		}
+		if (dropbear_restart_required) {
+			cmd.push('/etc/init.d/dropbear restart');
+		}
+		if (firewall_restart_required) {
+			cmd.push('/etc/init.d/firewall restart');
+		}
+
+		execute(cmd, function() {
+			cleanField('password1');
+			cleanField('password2');
+			if (pass1 == '12345678') { showError('div_securitymsg', '', '<strong>UWAGA!</strong> Wymagana jest zmiana domyślnego hasła do routera!'); }
+			showsecurity();
+		});
 	});
 }
 

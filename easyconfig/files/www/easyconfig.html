@@ -25,6 +25,7 @@
 	<a href="#" class="closebtn" onclick="closenav(); return false;">&times;</a>
 	<a href="#" onclick="btn_pages('status'); return false;"><i data-feather="bar-chart-2" class="iconwithtext"></i>Status</a>
 	<a href="#" onclick="btn_pages('config'); return false;"><i data-feather="settings" class="iconwithtext"></i>Ustawienia</a>
+	<a href="#" onclick="btn_pages('security'); return false;"><i data-feather="lock" class="iconwithtext"></i>Bezpieczeństwo</a>
 	<div id="menu_networks">
 		<a href="#" onclick="btn_pages('networks'); return false;"><i data-feather="share-2" class="iconwithtext"></i>Sieci dodatkowe</a>
 	</div>
@@ -56,7 +57,6 @@
 	<div id="menu_luci" style="display:none;">
 		<a href="/cgi-bin/luci" target="_blank"><i data-feather="external-link" class="iconwithtext"></i>LuCI</a>
 	</div>
-	<a href="#" onclick="btn_pages('security'); return false;"><i data-feather="lock" class="iconwithtext"></i>Bezpieczeństwo</a>
 	<a href="#" onclick="btn_pages('logout'); return false;"><i data-feather="log-out" class="iconwithtext"></i>Wyloguj</a>
 </div>
 
@@ -1728,7 +1728,7 @@
 		<h3 class="section">Hasło</h3>
 
 		<div class="alert alert-info text-center">
-			Hasło jest wspólne dla interfejsu graficznego oraz SSH
+			Hasło jest wspólne dla interfejsu użytkownika oraz SSH
 		</div>
 		<form class="form-horizontal">
 			<div class="form-group">
@@ -1746,11 +1746,11 @@
 			</div>
 
 			<h3 class="section">SSH</h3>
-			<div class="form-group" id="div_security_sshenable">
-				<label for="security_sshenable" class="col-xs-4 col-sm-3 control-label">Włączone</label>
+			<div class="form-group">
+				<label for="dropbear_enable" class="col-xs-4 col-sm-3 control-label">Włączone</label>
 				<div class="col-xs-8 col-sm-9">
 				<label class="switch">
-					<input id="security_sshenable" type="checkbox">
+					<input id="dropbear_enable" type="checkbox">
 					<div class="slider round"></div>
 				</label>
 				<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted">wyłączenie uniemożliwia logowanie przez protokół SSH</small></em></span>
@@ -1758,11 +1758,11 @@
 				</div>
 			</div>
 
-			<div class="form-group" id="div_security_sshpasswordauth">
-				<label for="security_sshpasswordauth" class="col-xs-4 col-sm-3 control-label">Logowanie przy pomocy hasła</label>
+			<div class="form-group">
+				<label for="dropbear_passwordauth" class="col-xs-4 col-sm-3 control-label">Logowanie przy pomocy hasła</label>
 				<div class="col-xs-8 col-sm-9">
 				<label class="switch">
-					<input id="security_sshpasswordauth" type="checkbox">
+					<input id="dropbear_passwordauth" type="checkbox">
 					<div class="slider round"></div>
 				</label>
 				<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted">po wyłączeniu możliwe jest logowanie tylko przy pomocy kluczy</small></em></span>
@@ -1771,11 +1771,51 @@
 			</div>
 
 			<div class="form-group">
-				<label for="security_sshport" class="col-xs-4 col-sm-3 control-label">Port</label>
+				<label for="dropbear_port" class="col-xs-4 col-sm-3 control-label">Port (sieć lokalna)</label>
 				<div class="col-xs-8 col-sm-9">
-					<input id="security_sshport" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);">
+					<input id="dropbear_port" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);">
+					<em><small class="form-text text-muted">port połączenia z sieci lokalnej</small></em>
 				</div>
 			</div>
+
+			<div class="form-group">
+				<label for="firewall_wanssh_port" class="col-xs-4 col-sm-3 control-label">Port (internet)</label>
+				<div class="col-xs-8 col-sm-9">
+					<input id="firewall_wanssh_port" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);">
+					<em><small class="form-text text-muted">port połączenia z internetu, zostaw puste aby wyłączyć dostęp z internetu</small></em>
+				</div>
+			</div>
+
+			<h3 class="section">Interfejs użytkownika</h3>
+			<div class="form-group">
+				<label for="firewall_wanhttp_port" class="col-xs-4 col-sm-3 control-label">Port HTTP (internet)</label>
+				<div class="col-xs-8 col-sm-9">
+					<input id="firewall_wanhttp_port" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);">
+					<em><small class="form-text text-muted">port połączenia z internetu, zostaw puste aby wyłączyć dostęp z internetu</small></em>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="firewall_wanhttps_port" class="col-xs-4 col-sm-3 control-label">Port HTTPS (internet)</label>
+				<div class="col-xs-8 col-sm-9">
+					<input id="firewall_wanhttps_port" type="input" class="form-control" onkeyup="proofreadNumericRange(this, 0, 65535);">
+					<em><small class="form-text text-muted">port połączenia z internetu, zostaw puste aby wyłączyć dostęp z internetu</small></em>
+				</div>
+			</div>
+
+			<h3 class="section">UART</h3>
+			<div class="form-group">
+				<label for="system_ttylogin" class="col-xs-4 col-sm-3 control-label">Wymagaj uwierzytelniana</label>
+				<div class="col-xs-8 col-sm-9">
+				<label class="switch">
+					<input id="system_ttylogin" type="checkbox">
+					<div class="slider round"></div>
+				</label>
+				<span class="hidden-xs control-label labelleft"><em><small class="form-text text-muted">wymagane podanie hasła przy logowaniu przez UART/port szeregowy</small></em></span>
+				<div class="visible-xs"><em><small class="form-text text-muted">wymagane podanie hasła przy logowaniu przez UART/port szeregowy</small></em></div>
+				</div>
+			</div>
+
 		</form>
 
 		<h3 class="section"></h3>
