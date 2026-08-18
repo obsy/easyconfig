@@ -5798,22 +5798,54 @@ function traficcycle(type) {
 
 /*****************************************************************************/
 
-function removeDiacritics(str) {
-	var from = "ąćęłńóśżźĄĆĘŁŃÓŚŻŹ";
-	var to = "acelnoszzACELNOSZZ";
-	for (var idx = 0, l = from.length; idx < l; idx++) {
-		str = str.replace(new RegExp(from.charAt(idx), 'g'), to.charAt(idx));
+function smsCharsCounting(text) {
+	for (var i = 0; i < text.length;) {
+		var cp = text.codePointAt(i);
+
+		if (cp > 0x7f) {
+			if (cp > 0xffff)
+				return -1;
+
+			var count = 0;
+			for (var c of text)
+				count++;
+
+			return count <= 70 ? 1 : Math.ceil(count / 67);
+		}
+
+		i += cp > 0xffff ? 2 : 1;
 	}
-	return str;
+
+	var septets = 0;
+
+	for (var c of text) {
+		if ("^{}\\[~]|€".includes(c))
+			septets += 2;
+		else
+			septets++;
+	}
+
+	if (septets <= 160)
+		return 1;
+
+	return Math.ceil(septets / 153);
+}
+
+function checkingNumberOfSMS(text) {
+	var cnt = 0;
+	if (text) {
+		cnt = smsCharsCounting(text);
+	}
+	setValue('sms_msgcnt', cnt <= 0 ? 0 : cnt );
 }
 
 function sendussd() {
-	if (checkField('ussd_code', validateussd)) {return;}
-	var ussd = getValue("ussd_code");
+	if (checkField('ussd_code', validateussd)) { return; }
+	var ussd = getValue('ussd_code');
 
 	ubus_call('easyconfig', 'ussd', { 'code': ussd }, function(data) {
-		if (data.response == "") {
-			showMsg("Brak odpowiedzi z modemu");
+		if (data.response == '') {
+			showMsg('Brak odpowiedzi z modemu');
 		} else {
 			showMsg((data.result).replace(/(\r\n|\r|\n)/g, '<br>'));
 		}
@@ -5821,16 +5853,16 @@ function sendussd() {
 }
 
 function sendsms() {
-	if (checkField('sms_number', validateNumeric)) {return;}
-	if (checkField('sms_msg', validateSMSText)) {return;}
-
-	var tnumber = getValue("sms_number").replace(/[^0-9]/g, '');
-	var msg = getValue("sms_msg");
-
-	msg = removeDiacritics(msg);
+	if (checkField('sms_number', validateNumeric)) { return; }
+	var tnumber = getValue('sms_number').replace(/[^0-9]/g, '');
+	var msg = getValue('sms_msg');
+	if (msg.length == 0) {
+		showMsg('Błąd w polu ' + getLabelText('sms_msg'), true);
+		return;
+	}
 
 	ubus_call('easyconfig', 'sms', { 'action': 'send', 'arg1': tnumber, 'arg2': msg }, function(data) {
-		if ((data.response).match(/sms sent sucessfully/) == null) {
+		if ((data.response).match(/sent successfully/) == null) {
 			showMsg('Wystąpił problem z wysłaniem wiadomości');
 		} else {
 			showMsg('Wysłano wiadomość');
@@ -5907,26 +5939,6 @@ function okremovesms() {
 			readsms();
 		}
 	});
-}
-
-function validateSMSText(msg) {
-	var errorCode = 0;
-
-	if (!msg || 0 === msg.length) {
-		errorCode = 1;
-	}
-	var count = (msg.match(/[\^{}\\[~]|]/g) || []).length;
-	var len = 160 - msg.length - count;
-	if (len < 0) {
-		errorCode = 2;
-	}
-
-	setValue('sms_len', len);
-	return errorCode;
-}
-
-function proofreadSMSText(input) {
-	proofreadText(input, validateSMSText, 0);
 }
 
 function readussdshortcuts() {
