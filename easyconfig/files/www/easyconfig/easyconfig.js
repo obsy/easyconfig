@@ -7835,13 +7835,13 @@ function showwol() {
 			var html = '<div class="row space">';
 			html += '<div class="col-xs-6">Opis</div>';
 			html += '<div class="col-xs-4">Adres MAC</div>';
-			html += '<div class="col-xs-2">Wybudzanie</div>';
+			html += '<div class="col-xs-2 labelright">Wybudzanie</div>';
 			html += '</div>';
 			for (var idx = 0; idx < sorted.length; idx++) {
 				html += '<hr><div class="row space">';
 				html += '<div class="col-xs-6 click" onclick="woldetails(\'' + btoa(JSON.stringify(sorted[idx])) + '\')">' + (sorted[idx].description == '' ? sorted[idx].mac : escapeHTML(sorted[idx].description)) + '</div>';
 				html += '<div class="col-xs-4">' + sorted[idx].mac + '</div>';
-				html += '<div class="col-xs-2"><span class="click" onclick="wolwakeup(\'' + sorted[idx].section + '\');" title="wybudź"><i data-feather="power"></i></span></div>';
+				html += '<div class="col-xs-2 labelright"><span class="click" onclick="wolwakeup(\'' + sorted[idx].section + '\');" title="wybudź"><i data-feather="power"></i></span></div>';
 				html += '</div>';
 			}
 			setValue('div_wol_content', html);
