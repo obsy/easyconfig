@@ -796,7 +796,9 @@ fi
 VPN=""
 [ -f /usr/lib/pppd/*/pptp.so ] && VPN=${VPN}'"pptp",'
 [ -e /lib/netifd/proto/sstp.sh ] && VPN=${VPN}'"sstp",'
-[ -e /lib/netifd/proto/wireguard.sh ] && VPN=${VPN}'"wireguard",'
+if [ -e /lib/netifd/proto/wireguard.sh ] || [ -e /lib/netifd/proto/wireguard.uc ]; then
+	VPN=${VPN}'"wireguard",'
+fi
 [ -e /etc/init.d/openvpn ] && VPN=${VPN}'"openvpn",'
 if [ -e /lib/netifd/proto/openvpn.sh ]; then
 	VPN=${VPN}'"openvpn",'
