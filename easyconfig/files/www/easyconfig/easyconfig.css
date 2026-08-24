@@ -529,6 +529,14 @@ h3 {
   color: white;
 }
 
+.select-option:hover {
+  background: #e6e6e6;
+}
+
+.select-option-active:hover {
+  background: #337ab7;
+}
+
 .click + .click {
     margin-left: 10px;
 }
