@@ -580,7 +580,7 @@ elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 Prod
 else
 	T=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null)
 	if [ -n "$T" ]; then
-		jsonfilter -s "$PROTOHANDLERS" -q -e '@.3g' >/dev/null && echo ',"3g"'
+		jsonfilter -s "$PROTOHANDLERS" -q -e '@["3g"]' >/dev/null && echo ',"3g"'
 	fi
 
 	if grep -q cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null; then
