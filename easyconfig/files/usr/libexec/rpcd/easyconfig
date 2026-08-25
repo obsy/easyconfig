@@ -250,8 +250,8 @@ case "$BOARDNAME" in
 	"cellc,rtl30vw"|\
 	"mikrotik,chateau"|\
 	"zte,mf286d")
-		awk '{printf "{\"Temperatura Wi-Fi 2.4 GHz\":\"%d &deg;C\"},", $1/1000}'  /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
-		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}'  /sys/class/hwmon/hwmon1/temp1_input 2>/dev/null
+		awk '{printf "{\"Temperatura Wi-Fi 2.4 GHz\":\"%d &deg;C\"},", $1/1000}' /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
+		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}' /sys/class/hwmon/hwmon1/temp1_input 2>/dev/null
 		;;
 	"glinet,gl-x300b")
 		if [ -n "$(ubus list battery 2>/dev/null)" ]; then
@@ -286,7 +286,7 @@ case "$BOARDNAME" in
 		;;
 	"zte,mf286"|\
 	"zte,mf286a")
-		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}'  /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
+		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}' /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
 		if [ -e /usr/bin/sms_tool ]; then
 			DEVICE=$(/usr/share/easyconfig/modem/detect.sh)
 			if [ -n "$DEVICE" ]; then
@@ -323,7 +323,7 @@ case "$BOARDNAME" in
 		fi
 		;;
 	"zte,mf286r")
-		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}'  /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
+		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}'/sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
 		;;
 	*)
 		T=0
@@ -389,6 +389,7 @@ show_system() {
 
 show_config()
 {
+PROTOHANDLERS=$(ubus call network get_proto_handlers)
 HOSTNAME=$(uci -q get system.@system[0].hostname)
 WAN_PROTO=$(uci -q get network.wan.proto)
 WAN_IPADDR=$(uci -q get network.wan.ipaddr)
@@ -568,32 +569,32 @@ echo '"wan_waninlan":'$WAN_WANINLAN','
 echo '"wan_protos":["none"'
 if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	echo ',"dhcp","static"'
-	[ -f /usr/lib/pppd/*/pppoe.so ] && echo ',"pppoe"'
+	jsonfilter -s "$PROTOHANDLERS" -q -e '@.pppoe' >/dev/null && echo ',"pppoe"'
 fi
 [ -n "$WAN_IFNAMES_RNDIS" ] && echo ',"dhcp_rndis"'
 T=$(echo $(sed 's/^$/######/g' /sys/kernel/debug/usb/devices 2>/dev/null) | sed 's/######/\n/g' | awk '/Driver=rndis_host/ && /Driver=cdc_acm/')
 if [ -n "$T" ]; then
-	[ -e /lib/netifd/proto/ncm.sh ] && echo ',"ncm"'
+	jsonfilter -s "$PROTOHANDLERS" -q -e '@.ncm' >/dev/null && echo ',"ncm"'
 elif grep -q "Vendor=0e8d ProdID=7127\|Vendor=2cb7 ProdID=0007\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices 2>/dev/null; then
-	[ -e /lib/netifd/proto/xmm.sh ] && echo ',"xmm"'
+	jsonfilter -s "$PROTOHANDLERS" -q -e '@.xmm' >/dev/null && echo ',"xmm"'
 else
 	T=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null)
 	if [ -n "$T" ]; then
-		[ -e /lib/netifd/proto/3g.sh ] && echo ',"3g"'
+		jsonfilter -s "$PROTOHANDLERS" -q -e '@.3g' >/dev/null && echo ',"3g"'
 	fi
 
 	if grep -q cdc_mbim /sys/kernel/debug/usb/devices 2>/dev/null; then
-		[ -e /lib/netifd/proto/mbim.sh ] && echo ',"mbim"'
+		jsonfilter -s "$PROTOHANDLERS" -q -e '@.mbim' >/dev/null && echo ',"mbim"'
 	fi
 
-	[ -e /lib/netifd/proto/modemmanager.sh ] && echo ',"modemmanager"'
+	jsonfilter -s "$PROTOHANDLERS" -q -e '@.modemmanager' >/dev/null && echo ',"modemmanager"'
 
 	if grep -q cdc_ncm /sys/kernel/debug/usb/devices 2>/dev/null; then
-		[ -e /lib/netifd/proto/ncm.sh ] && echo ',"ncm"'
+		jsonfilter -s "$PROTOHANDLERS" -q -e '@.ncm' >/dev/null && echo ',"ncm"'
 	fi
 
 	if grep -q qmi_wwan /sys/kernel/debug/usb/devices 2>/dev/null; then
-		[ -e /lib/netifd/proto/qmi.sh ] && echo ',"qmi"'
+		jsonfilter -s "$PROTOHANDLERS" -q -e '@.qmi' >/dev/null && echo ',"qmi"'
 	fi
 fi
 echo '],'
@@ -608,7 +609,7 @@ done
 echo "$O"'],'
 
 echo '"wan_devices_mm":['
-if [ -e /lib/netifd/proto/modemmanager.sh ]; then
+if jsonfilter -s "$PROTOHANDLERS" -q -e '@.modemmamager' >/dev/null; then
 	T=$(mmcli -J -L | jsonfilter -q -e '@["modem-list"]' | jsonfilter -q -e '@.*')
 	for M in $T; do
 		DEVICE=""
@@ -794,13 +795,11 @@ else
 fi
 
 VPN=""
-[ -f /usr/lib/pppd/*/pptp.so ] && VPN=${VPN}'"pptp",'
-[ -e /lib/netifd/proto/sstp.sh ] && VPN=${VPN}'"sstp",'
-if [ -e /lib/netifd/proto/wireguard.sh ] || [ -e /lib/netifd/proto/wireguard.uc ]; then
-	VPN=${VPN}'"wireguard",'
-fi
+jsonfilter -s "$PROTOHANDLERS" -q -e '@.pptp' >/dev/null && VPN=${VPN}'"pptp",'
+jsonfilter -s "$PROTOHANDLERS" -q -e '@.sstp' >/dev/null && VPN=${VPN}'"sstp",'
+jsonfilter -s "$PROTOHANDLERS" -q -e '@.wireguard' >/dev/null && VPN=${VPN}'"wireguard",'
 [ -e /etc/init.d/openvpn ] && VPN=${VPN}'"openvpn",'
-if [ -e /lib/netifd/proto/openvpn.sh ]; then
+if jsonfilter -s "$PROTOHANDLERS" -q -e '@.openvpn'; then
 	VPN=${VPN}'"openvpn",'
 	echo '"openvpnproto":true,'
 else
