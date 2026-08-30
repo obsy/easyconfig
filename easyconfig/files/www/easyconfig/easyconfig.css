@@ -538,9 +538,9 @@ h3 {
 }
 
 .click + .click {
-    margin-left: 10px;
+  margin-left: 10px;
 }
 
 .labelright {
-    text-align:right !important;
+  text-align:right !important;
 }

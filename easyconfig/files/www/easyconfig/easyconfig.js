@@ -4683,6 +4683,25 @@ function calculatedistance(frequency, signal) {
 	return dist.toFixed(0);
 }
 
+function disconnectcmd(mac) {
+	var t = [];
+	t.push('/usr/bin/easyconfig_statistics.sh')
+	t.push('MAC="' + mac + '"');
+	t.push('WLANS=$(ubus list hostapd.*)');
+	t.push('for WLAN in $WLANS; do');
+	t.push(' if ubus call $WLAN get_clients | grep -q "$MAC"; then');
+	t.push('  ubus call $WLAN del_client "{\'addr\':\'$MAC\',\'reason\':0,\'deauth\':false,\'ban_time\':0}"');
+	t.push('  rm -- "$0"');
+	t.push('  exit 0');
+	t.push(' fi');
+	t.push('done');
+	return t;
+}
+
+function hostdisconnect(mac) {
+	execute(disconnectcmd(mac), showclients);
+}
+
 function hostinfo(id) {
 	var host = clients.find(obj => obj.id == id);
 
@@ -4691,7 +4710,16 @@ function hostinfo(id) {
 	html += createRowForModal('MAC', host.mac);
 	html += createRowForModal('Producent', getmanuf(host.mac));
 	html += createRowForModal('Nazwa rzeczywista', (host.dhcpname == '' ? '-' : host.dhcpname));
-	html += createRowForModal('Typ połączenia', (host.type == 1 ? 'przewodowo' : 'bezprzewodowo'));
+	var type;
+	if (host.type == 1) {
+		type = 'przewodowo';
+	} else {
+		type = 'bezprzewodowo';
+		if (host.active) {
+			type += ' <span class="click" style="margin-left:10px;" title="rozłącz klienta" onclick="hostdisconnect(\'' + host.mac + '\');"><i data-feather="disconnect"></i>';
+		}
+	}
+	html += createRowForModal('Typ połączenia', type);
 	if (host.active) {
 		if (host.type == 1) {
 			var obj = physicalports.find(o => o.port === host.port);
@@ -4790,6 +4818,7 @@ function hostinfo(id) {
 		}
 	}
 	showMsg(html, false);
+	showicon();
 }
 
 function hostblock(id) {
@@ -5021,16 +5050,7 @@ function savehostip() {
 	}
 
 	if (getValue('hostip_disconnect')) {
-		cmd.push('MAC="' + mac + '"');
-		cmd.push('T=$(ubus list hostapd.*)');
-		cmd.push('for T1 in $T; do');
-		cmd.push('	T2=$(ubus call $T1 get_clients | grep $MAC)');
-		cmd.push('	if [ -n "$T2" ]; then');
-		cmd.push('		ubus call $T1 del_client "{\'addr\':\'$MAC\',\'reason\':5,\'deauth\':false,\'ban_time\':0}"');
-		cmd.push('		rm -- "$0"');
-		cmd.push('		exit 0');
-		cmd.push('	fi');
-		cmd.push('done');
+		cmd.push(...disconnectcmd(mac));
 	}
 
 	execute(cmd, showclients);
