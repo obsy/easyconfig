@@ -4660,6 +4660,12 @@ function hostmenu(id) {
 	var html = escapeHTML(host.displayname) + '<hr>';
 	html += '<p><span class="click" onclick="closeMsg();hostinfo(' + (host.active_id > -1 ? host.active_id : host.id) + ');">informacje</span></p>';
 	html += '<p><span class="click" onclick="closeMsg();hostnameedit(' + host.id + ');">zmiana nazwy</span></p>';
+	if (host.active && host.ip && config.services.pingraw) {
+		html += '<p><span class="click" onclick="closeMsg();hostping(' + host.id + ');">ping</span></p>';
+	}
+	if (host.type == 2 && host.active) {
+		html += '<p><span class="click" onclick="closeMsg();askhostdisconnect(' + host.id + ');">rozłącz</span></p>';
+	}
 	html += '<p><span class="click" onclick="closeMsg();hostblock(' + host.id + ');">blokady</span></p>';
 	if (config.services.nftqos) {
 		html += '<p><span class="click" onclick="closeMsg();hostqos(' + host.id + ');">limity</span></p>';
@@ -4676,6 +4682,36 @@ function hostmenu(id) {
 	}
 	html += '<hr><p><span class="click" onclick="closeMsg();hostremovedata(' + host.id + ');">usuwanie danych</span></p>';
 	showMsg(html);
+}
+
+function hostping(id) {
+	var host = clients.find(obj => obj.id == id);
+
+	ubus_call('file', 'exec', { 'command': '/usr/bin/pingraw', 'params': [ host.ip ] }, function(data) {
+		var result;
+		try {
+			result = JSON.parse(data.stdout);
+		} catch (e) {
+			showMsg('Brak możliwości wysłania żądania ICMP');
+			return;
+		}
+
+		var hostObj = result.find(obj => obj.host === host.ip);
+		var status = hostObj ? hostObj.status : undefined;
+
+		showMsg(status == 'success' ? 'Czas odpowiedzi: ' + hostObj.time_ms + ' ms' : 'Żądanie zostało wysłane, ale nie otrzymano odpowiedzi.');
+	})
+}
+
+function askhostdisconnect(id) {
+	var host = clients.find(obj => obj.id == id);
+
+	setValue('dialog_val', host.mac);
+	showDialog('Rozłączyć "' + escapeHTML(host.displayname) + '"?', 'Anuluj', 'OK', okhostdisconnect);
+}
+
+function okhostdisconnect() {
+	hostdisconnect(getValue('dialog_val'));
 }
 
 function calculatedistance(frequency, signal) {
@@ -4710,16 +4746,7 @@ function hostinfo(id) {
 	html += createRowForModal('MAC', host.mac);
 	html += createRowForModal('Producent', getmanuf(host.mac));
 	html += createRowForModal('Nazwa rzeczywista', (host.dhcpname == '' ? '-' : host.dhcpname));
-	var type;
-	if (host.type == 1) {
-		type = 'przewodowo';
-	} else {
-		type = 'bezprzewodowo';
-		if (host.active) {
-			type += ' <span class="click" style="margin-left:10px;" title="rozłącz klienta" onclick="hostdisconnect(\'' + host.mac + '\');"><i data-feather="disconnect"></i>';
-		}
-	}
-	html += createRowForModal('Typ połączenia', type);
+	html += createRowForModal('Typ połączenia', host.type == 1 ? 'przewodowo' : 'bezprzewodowo');
 	if (host.active) {
 		if (host.type == 1) {
 			var obj = physicalports.find(o => o.port === host.port);
@@ -4818,7 +4845,6 @@ function hostinfo(id) {
 		}
 	}
 	showMsg(html, false);
-	showicon();
 }
 
 function hostblock(id) {
