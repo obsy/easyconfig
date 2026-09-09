@@ -323,7 +323,7 @@ case "$BOARDNAME" in
 		fi
 		;;
 	"zte,mf286r")
-		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}'/sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
+		awk '{printf "{\"Temperatura Wi-Fi 5 GHz\":\"%d &deg;C\"},", $1/1000}' /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null
 		;;
 	*)
 		T=0
@@ -387,8 +387,7 @@ show_system() {
 
 ##############################################################################
 
-show_config()
-{
+show_config() {
 PROTOHANDLERS=$(ubus call network get_proto_handlers)
 HOSTNAME=$(uci -q get system.@system[0].hostname)
 WAN_PROTO=$(uci -q get network.wan.proto)
@@ -799,7 +798,7 @@ jsonfilter -s "$PROTOHANDLERS" -q -e '@.pptp' >/dev/null && VPN=${VPN}'"pptp",'
 jsonfilter -s "$PROTOHANDLERS" -q -e '@.sstp' >/dev/null && VPN=${VPN}'"sstp",'
 jsonfilter -s "$PROTOHANDLERS" -q -e '@.wireguard' >/dev/null && VPN=${VPN}'"wireguard",'
 [ -e /etc/init.d/openvpn ] && VPN=${VPN}'"openvpn",'
-if jsonfilter -s "$PROTOHANDLERS" -q -e '@.openvpn'; then
+if jsonfilter -s "$PROTOHANDLERS" -q -e '@.openvpn' >/dev/null; then
 	VPN=${VPN}'"openvpn",'
 	echo '"openvpnproto":true,'
 else
@@ -1197,8 +1196,7 @@ show_traffic() {
 
 ##############################################################################
 
-show_modem()
-{
+show_modem() {
 	PROTO=$(uci -q get network.wan.proto)
 	[ -z "$PROTO" ] && PROTO="?"
 
@@ -1493,8 +1491,7 @@ show_wifiscan() {
 
 ##############################################################################
 
-pincode()
-{
+pincode() {
 	read input;
 	json_load "$input"
 	json_get_vars proto device pincode
@@ -1508,8 +1505,7 @@ pincode()
 	echo '{}'
 }
 
-detect_wan()
-{
+detect_wan() {
 # Fibocom L850/L860/FM350
 	if grep -q "Vendor=0e8d ProdID=7126\|Vendor=0e8d ProdID=7127\|Vendor=8087 ProdID=095a" /sys/kernel/debug/usb/devices; then
 		ifdown wan
@@ -1654,7 +1650,7 @@ detect_wan()
 			eval $(jsonfilter -i /etc/board.json -e 'WAN_IFNAME_DEFAULT=@.network.wan.ifname' -e 'WAN_PROTO_DEFAULT=@.network.wan.protocol' -e 'WAN_PORTS_DEFAULT=@.network.wan.ports')
 		fi
 	fi
-	[ -z "$WAN_IFNAME_DEFAULT" ] && [ -n "WAN_PORTS_DEFAULT" ] && WAN_IFNAME_DEFAULT="br-wan"
+	[ -z "$WAN_IFNAME_DEFAULT" ] && [ -n "$WAN_PORTS_DEFAULT" ] && WAN_IFNAME_DEFAULT="br-wan"
 	if [ "x$WAN_PROTO_DEFAULT" = "xdhcp" ]; then
 		if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 			echo '{"proto":"dhcp","ifname":"'$WAN_IFNAME_DEFAULT'"}'
@@ -1800,8 +1796,7 @@ upgrade() {
 
 ##############################################################################
 
-show_vpn_up()
-{
+show_vpn_up() {
 	echo '{"result":['
 
 	if [ -e /etc/config/zerotier ]; then
@@ -1850,8 +1845,7 @@ show_vpn_up()
 	echo "]}"
 }
 
-show_vpn()
-{
+show_vpn() {
 	echo '{"result":['
 
 	T=$(ubus call network.interface dump)
@@ -1953,8 +1947,7 @@ show_vpn()
 	echo ',"wan_lanto":"'$(findsection firewall forwarding src lan dest wan)'"}'
 }
 
-show_vpn_status()
-{
+show_vpn_status() {
 	read input;
 	json_load "$input"
 	json_get_vars interface
@@ -2005,8 +1998,7 @@ show_vpn_status()
 	echo "}"
 }
 
-show_vpn_status_zerotier()
-{
+show_vpn_status_zerotier() {
 	read input;
 	json_load "$input"
 	json_get_vars section
@@ -2023,8 +2015,7 @@ show_vpn_status_zerotier()
 	echo "}"
 }
 
-show_vpn_details()
-{
+show_vpn_details() {
 	read input;
 	json_load "$input"
 	json_get_vars proto interface section
@@ -2164,8 +2155,7 @@ show_vpn_details()
 	fi
 }
 
-get_wireguard_keys()
-{
+get_wireguard_keys() {
 	read input;
 	json_load "$input"
 	json_get_vars privkey
@@ -2176,8 +2166,7 @@ get_wireguard_keys()
 
 ##############################################################################
 
-show_geolocation()
-{
+show_geolocation() {
 	T=$(wget -q -T 3 -O - http://ip-api.com/json/?fields=country,regionName,city,isp,status,query,lat,lon)
 	if [ -z "$T" ]; then
 		echo '{"status":"fail"}'
@@ -2188,8 +2177,7 @@ show_geolocation()
 
 ##############################################################################
 
-adblock_bwlist()
-{
+adblock_bwlist() {
 	json_add_array blocklist
 	F=/etc/adblock/adblock.blocklist
 	if [ -s "$F" ]; then
@@ -2209,8 +2197,7 @@ adblock_bwlist()
 	json_close_array
 }
 
-show_adblock()
-{
+show_adblock() {
 	if [ ! -e /etc/init.d/adblock ]; then
 		json_init
 		/etc/init.d/easyconfig_adblock enabled && json_add_boolean "enabled" 1 || json_add_boolean "enabled" 0
@@ -2287,8 +2274,7 @@ show_adblock()
 
 ##############################################################################
 
-show_nightmode()
-{
+show_nightmode() {
 	echo '{'
 	[ -e /etc/crontabs/root ] && T=$(grep easyconfig_nightmode /etc/crontabs/root)
 	if [ -n "$T" ]; then
