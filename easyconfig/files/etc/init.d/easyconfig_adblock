@@ -9,9 +9,9 @@ start() {
 	B=/etc/adblock/adblock.blocklist
 	W=/etc/adblock/adblock.allowlist
 
-	[ -e /etc/adblock/adblock.blocklist ] || exit 0
-	[ -s /etc/adblock/adblock.blocklist ] || exit 0
-	[ -e /etc/adblock/adblock.allowlist ] || (mkdir -p "$(dirname "$W")"; touch "$W")
+	[ -e "$B" ] || exit 0
+	[ -s "$B" ] || exit 0
+	[ -e "$W" ] || (mkdir -p "$(dirname "$W")"; touch "$W")
 
 	C=$(uci -q get dhcp.@dnsmasq[0].confdir)
 	if [ -z "$C" ]; then
