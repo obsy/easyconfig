@@ -189,7 +189,7 @@ function hrband(band) {
 }
 
 function escapeHTML(str) {
-	const tagsToReplace = {
+	var tagsToReplace = {
 		'&': '&amp;',
 		'<': '&lt;',
 		'>': '&gt;',
@@ -2307,7 +2307,7 @@ var portsmapping = [];
 var simslot = {};
 
 function portLabel(port) {
-	const found = portsmapping.find(p => p.port === port);
+	var found = portsmapping.find(p => p.port === port);
 	return found ? found.name : port.toUpperCase();
 }
 
@@ -2360,7 +2360,7 @@ function showstatus() {
 				var sorted;
 				if (portsmapping.length > 0) {
 					data.ports.forEach(e => {
-						const found = portsmapping.find(p => p.port === e.port);
+						var found = portsmapping.find(p => p.port === e.port);
 						e.id = found ? found.id : 0;
 					});
 					sorted = sortJSON(data.ports, 'id', 'asc');
@@ -3469,7 +3469,7 @@ function naturalSortJSON(data, key) {
 
 function sortByIP(data) {
 	return data.sort((a, b) => {
-		const ipToNum = ip => ip.split('.').reduce((acc, octet) => acc * 256 + Number(octet), 0);
+		var ipToNum = ip => ip.split('.').reduce((acc, octet) => acc * 256 + Number(octet), 0);
 		return ipToNum(a.ip) - ipToNum(b.ip);
 	});
 }
@@ -4115,27 +4115,27 @@ function bytesToSize(bytes) {
 }
 
 function clientspie_toggle() {
-	var showclientspie = getCookie('easyconfig_clients_pie');
+	var showclientspie = getCookie('easyconfig_clients_stats');
 	if (showclientspie === '0') {
-		setDisplay('div_clients_pie', true);
-		setCookie('easyconfig_clients_pie', '1');
-		setValue('div_clients_showpie', '<span class="click" title="ukryj wykres" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
+		setDisplay('div_clients_stats', true);
+		setCookie('easyconfig_clients_stats', '1');
+		setValue('div_clients_showpie', '<span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
 	} else {
-		setDisplay('div_clients_pie', false);
-		setCookie('easyconfig_clients_pie', '0');
-		setValue('div_clients_showpie', '<span class="click" title="pokaż wykres" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
+		setDisplay('div_clients_stats', false);
+		setCookie('easyconfig_clients_stats', '0');
+		setValue('div_clients_showpie', '<span class="click" title="pokaż wykresy" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
 	}
 	showicon();
 }
 
 function clientspie_show() {
-	var showclientspie = getCookie('easyconfig_clients_pie');
+	var showclientspie = getCookie('easyconfig_clients_stats');
 	if (showclientspie === '0') {
-		setDisplay('div_clients_pie', false);
-		setValue('div_clients_showpie', '<span class="click" title="pokaż wykres" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
+		setDisplay('div_clients_stats', false);
+		setValue('div_clients_showpie', '<span class="click" title="pokaż wykresy" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
 	} else {
-		setDisplay('div_clients_pie', true);
-		setValue('div_clients_showpie', '<span class="click" title="ukryj wykres" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
+		setDisplay('div_clients_stats', true);
+		setValue('div_clients_showpie', '<span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
 	}
 	showicon();
 }
@@ -4263,7 +4263,10 @@ function clientscallback(sortby) {
 		}
 		html += '</div></div>';
 
-		var total = 0;
+		var clients_type = {};
+		var clients_capa = {};
+		var clients_transfer_total = 0;
+		var clients_connected_total = 0;
 		for (var idx = 0, n = clients.length; idx < n; idx++) {
 			if (!clients[idx].active) {
 				clients[idx].active_id = -1;
@@ -4280,18 +4283,60 @@ function clientscallback(sortby) {
 					clients[idx].tx = 0;
 					clients[idx].rx = 0;
 				}
+				if (clients[idx].type == 1) {
+					clients_type['wire'] = (clients_type['wire'] ?? 0) + 1;
+				}
+				if (clients[idx].type == 2) {
+					if (clients[idx].band == '2') {
+						clients_type['wireless2'] = (clients_type['wireless2'] ?? 0) + 1;
+					}
+					if (clients[idx].band == '5') {
+						clients_type['wireless5'] = (clients_type['wireless5'] ?? 0) + 1;
+					}
+					if (clients[idx].band == '6') {
+						clients_type['wireless6'] = (clients_type['wireless6'] ?? 0) + 1;
+					}
+					var capa = 0;
+					if (clients[idx].capa >= 4 && clients[idx].capa <= 7) {
+						capa = clients[idx].capa;
+						if (capa == '6' && clients[idx].band == 6) {
+							capa = '6e';
+						}
+					}
+					clients_capa[capa] = (clients_capa[capa] ?? 0) + 1;
+					clients_connected_total += clients[idx].connected;
+				}
 			}
-			total += clients[idx].tx + clients[idx].rx;
+			clients_transfer_total += clients[idx].tx + clients[idx].rx;
 		}
 
-		if (filterby == 'active' && total > 0) {
-			html += '<div class="row"><div id="div_clients_showpie" class="col-xs-12 text-right click"><span class="click" title="ukryj wykres" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span></div></div>';
-			html += '<div id="div_clients_pie"><canvas id="clients_pie" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</small></em></div></div>';
+		if (filterby == 'active') {
+			html += '<div class="row"><div id="div_clients_showpie" class="col-xs-12 text-right click"><span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span></div></div>';
+			html += '<div id="div_clients_stats" class="row">';
+			if (clients_transfer_total > 0) {
+				html += '<div class="col-xs-12 col-sm-6">';
+				html += '<div id="div_clients_stats_transfer"><canvas id="clients_stats_transfer" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</small></em></div></div>';
+				html += '</div>';
+			}
+			if (clients_connected_total > 0) {
+				html += '<div class="col-xs-12 col-sm-6">';
+				html += '<div id="div_clients_stats_connected"><canvas id="clients_stats_connected" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg czasu połączenia</small></em></div></div>';
+				html += '</div>';
+			}
+			html += '<div class="col-xs-12 col-sm-6">';
+			html += '<div id="div_clients_stats_type"><canvas id="clients_stats_type" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg typu połączenia</small></em></div></div>';
+			html += '</div>';
+			if (Object.keys(clients_capa).length) {
+				html += '<div class="col-xs-12 col-sm-6">';
+				html += '<div id="div_clients_stats_capa"><canvas id="clients_stats_capa" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg standardu połączenia</small></em></div></div>';
+				html += '</div>';
+			}
 			html += '<div id="div_clients_pie_tooltip" class="tooltip"></div>';
+			html += '</div>';
 		}
 
 		for (var idx = 0, n = clients.length; idx < n; idx++) {
-			clients[idx].percent = Math.round((clients[idx].tx + clients[idx].rx) * 100 / total);
+			clients[idx].percent = Math.round((clients[idx].tx + clients[idx].rx) * 100 / clients_transfer_total);
 			if (clients[idx].dhcpname == '*') { clients[idx].dhcpname = ''; }
 			clients[idx].displayname = (clients[idx].username != '' ? clients[idx].username : (clients[idx].dhcpname != '' ? clients[idx].dhcpname : clients[idx].mac ));
 			clients[idx].id = idx;
@@ -4441,23 +4486,151 @@ function clientscallback(sortby) {
 		}
 		clientscallbackfilter(filterby);
 
-		if (filterby == 'active' && total > 0) {
-			var canvas = document.getElementById('clients_pie');
-			var ctx = canvas.getContext('2d', { willReadFrequently: true });
-			var previousRadian = 1.5 * Math.PI;
-			var positionInfo = document.getElementById('div_clients_pie').getBoundingClientRect();
+		if (filterby == 'active') {
+			if (clients_transfer_total > 0) {
+				var canvas = document.getElementById('clients_stats_transfer');
+				var ctx = canvas.getContext('2d', { willReadFrequently: true });
+				var previousRadian = 1.5 * Math.PI;
+				var positionInfo = document.getElementById('div_clients_stats_transfer').getBoundingClientRect();
+				canvas.width = positionInfo.width;
+				var middle = {
+					x: canvas.width / 2,
+					y: canvas.height / 2,
+					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
+				};
+
+				ctx.strokeStyle = 'white';
+				for (var idx = 0; idx < sorted.length; idx++) {
+					if (!sorted[idx].active) { continue; }
+					ctx.fillStyle = string2color(sorted[idx].mac);
+					var radian = (2 * Math.PI) * ((sorted[idx].tx + sorted[idx].rx) / clients_transfer_total);
+					ctx.beginPath();
+					ctx.moveTo(middle.x, middle.y);
+					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					previousRadian += radian;
+				}
+
+				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
+				ctx.beginPath();
+				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+
+				var clients_stats_transfer_tooltip = function (e) {
+					var rect = this.getBoundingClientRect();
+					var x = e.clientX - rect.left;
+					var y = e.clientY - rect.top;
+					var c = this.getContext('2d', { willReadFrequently: true });
+					var p = c.getImageData(x, y, 1, 1).data;
+					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
+					setDisplay('div_clients_pie_tooltip', false);
+
+					for (var idx = 0, n = sorted.length; idx < n; idx++) {
+						if (!sorted[idx].active) { continue; }
+						if (string2color(sorted[idx].mac) == hex) {
+							var e1 = document.getElementById('div_clients_pie_tooltip');
+							var offsetParent = e1.offsetParent || document.body;
+							var parentRect = offsetParent.getBoundingClientRect();
+							var left = e.clientX - parentRect.left + offsetParent.scrollLeft + 15;
+							var top  = e.clientY - parentRect.top + offsetParent.scrollTop + 15;
+
+							e1.style.top = top + 'px';
+							e1.style.left = left + 'px';
+							setValue('div_clients_pie_tooltip', escapeHTML(sorted[idx].displayname) + ': ' + bytesToSize(sorted[idx].tx + sorted[idx].rx) + ' (' + sorted[idx].percent + '%), połączony ' + formatDuration(sorted[idx].connected, false));
+							setDisplay('div_clients_pie_tooltip', true);
+							break;
+						}
+					}
+				};
+				document.getElementById('clients_stats_transfer').addEventListener('mousemove', clients_stats_transfer_tooltip, false);
+			}
+
+			if (clients_connected_total > 0) {
+				var canvas = document.getElementById('clients_stats_connected');
+				var ctx = canvas.getContext('2d', { willReadFrequently: true });
+				var previousRadian = 1.5 * Math.PI;
+				var positionInfo = document.getElementById('div_clients_stats_connected').getBoundingClientRect();
+				canvas.width = positionInfo.width;
+				var middle = {
+					x: canvas.width / 2,
+					y: canvas.height / 2,
+					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
+				};
+
+				ctx.strokeStyle = 'white';
+				for (var idx = 0; idx < sorted.length; idx++) {
+					if (!sorted[idx].active) { continue; }
+					ctx.fillStyle = string2color(sorted[idx].mac);
+					var radian = (2 * Math.PI) * (sorted[idx].connected / clients_connected_total);
+					ctx.beginPath();
+					ctx.moveTo(middle.x, middle.y);
+					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					previousRadian += radian;
+				}
+
+				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
+				ctx.beginPath();
+				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+
+				var clients_stats_connected_tooltip = function (e) {
+					var rect = this.getBoundingClientRect();
+					var x = e.clientX - rect.left;
+					var y = e.clientY - rect.top;
+					var c = this.getContext('2d', { willReadFrequently: true });
+					var p = c.getImageData(x, y, 1, 1).data;
+					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
+					setDisplay('div_clients_pie_tooltip', false);
+
+					for (var idx = 0, n = sorted.length; idx < n; idx++) {
+						if (!sorted[idx].active) { continue; }
+						if (string2color(sorted[idx].mac) == hex) {
+							var e1 = document.getElementById('div_clients_pie_tooltip');
+							var offsetParent = e1.offsetParent || document.body;
+							var parentRect = offsetParent.getBoundingClientRect();
+							var left = e.clientX - parentRect.left + offsetParent.scrollLeft + 15;
+							var top  = e.clientY - parentRect.top + offsetParent.scrollTop + 15;
+
+							e1.style.top = top + 'px';
+							e1.style.left = left + 'px';
+							setValue('div_clients_pie_tooltip', escapeHTML(sorted[idx].displayname) + ': ' + (formatDuration(sorted[idx].connected)).trim() + ', ' + bytesToSize(sorted[idx].tx + sorted[idx].rx) + ' (' + sorted[idx].percent + '%)', false);
+							setDisplay('div_clients_pie_tooltip', true);
+							break;
+						}
+					}
+				};
+				document.getElementById('clients_stats_connected').addEventListener('mousemove', clients_stats_connected_tooltip, false);
+			}
+
+			var clients_stats_type_lables = {
+				'wire': 'Przewodowo',
+				'wireless2': 'Bezprzewodowo ' + hrband(2),
+				'wireless5': 'Bezprzewodowo ' + hrband(5),
+				'wireless6': 'Bezprzewodowo ' + hrband(6)
+			};
+			canvas = document.getElementById('clients_stats_type');
+			ctx = canvas.getContext('2d', { willReadFrequently: true });
+			previousRadian = 1.5 * Math.PI;
+			positionInfo = document.getElementById('div_clients_stats_type').getBoundingClientRect();
 			canvas.width = positionInfo.width;
-			var middle = {
+			middle = {
 				x: canvas.width / 2,
 				y: canvas.height / 2,
 				radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
 			};
 
 			ctx.strokeStyle = 'white';
-			for (var idx = 0; idx < sorted.length; idx++) {
-				if (!sorted[idx].active) { continue; }
-				ctx.fillStyle = string2color(sorted[idx].mac);
-				var radian = (2 * Math.PI) * ((sorted[idx].tx + sorted[idx].rx) / total);
+
+			for (var [label, count] of Object.entries(clients_type)) {
+				ctx.fillStyle = string2color(clients_stats_type_lables[label]);
+				var radian = (2 * Math.PI) * (count / counter_active);
 				ctx.beginPath();
 				ctx.moveTo(middle.x, middle.y);
 				ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
@@ -4473,7 +4646,7 @@ function clientscallback(sortby) {
 			ctx.closePath();
 			ctx.stroke();
 
-			var clients_pie_tooltip = function (e) {
+			var clients_stats_type_tooltip = function (e) {
 				var eventDoc, doc, body;
 				e = e || window.event;
 				if (e.pageX == null && e.clientX != null) {
@@ -4488,27 +4661,106 @@ function clientscallback(sortby) {
 						(doc && doc.clientTop || body && body.clientTop || 0 );
 				}
 
-				const rect = this.getBoundingClientRect();
-				const x = e.clientX - rect.left;
-				const y = e.clientY - rect.top;
+				var rect = this.getBoundingClientRect();
+				var x = e.clientX - rect.left;
+				var y = e.clientY - rect.top;
 				var c = this.getContext('2d', { willReadFrequently: true });
 				var p = c.getImageData(x, y, 1, 1).data;
 				var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
 				setDisplay('div_clients_pie_tooltip', false);
-				for (var idx = 0, n = sorted.length; idx < n; idx++) {
-					if (!sorted[idx].active) { continue; }
-					if (string2color(sorted[idx].mac) == hex) {
+				for (var [label, count] of Object.entries(clients_type)) {
+					if (string2color(clients_stats_type_lables[label]) == hex) {
 						var e1 = document.getElementById('div_clients_pie_tooltip');
 						e1.style.top = (e.pageY + 15) + 'px';
 						e1.style.left = (e.pageX + 15) + 'px';
-						setValue('div_clients_pie_tooltip', escapeHTML(sorted[idx].displayname) + ': ' + bytesToSize(sorted[idx].tx + sorted[idx].rx) + ' (' + sorted[idx].percent + '%), połączony ' + formatDuration(sorted[idx].connected, false));
+						setValue('div_clients_pie_tooltip', clients_stats_type_lables[label] + ': ' + count, false);
 						setDisplay('div_clients_pie_tooltip', true);
 						break;
 					}
 				}
 			};
+			document.getElementById('clients_stats_type').addEventListener('mousemove', clients_stats_type_tooltip, false);
 
-			document.getElementById('clients_pie').addEventListener('mousemove', clients_pie_tooltip, false);
+			if (Object.keys(clients_capa).length) {
+				var clients_stats_capa_lables = {
+					'0': 'nieznane',
+					'4': 'Wi-Fi 4 (802.11n)',
+					'5': 'Wi-Fi 5 (802.11ac)',
+					'6': 'Wi-Fi 6 (802.11ax)',
+					'6e': 'Wi-Fi 6E (802.11ax)',
+					'7': 'Wi-Fi 7 (802.11be)'
+				};
+				var clients_stats_capa_count = 0;
+				for (var [label, count] of Object.entries(clients_capa)) {
+					clients_stats_capa_count += count;
+				}
+				canvas = document.getElementById('clients_stats_capa');
+				ctx = canvas.getContext('2d', { willReadFrequently: true });
+				previousRadian = 1.5 * Math.PI;
+				positionInfo = document.getElementById('div_clients_stats_capa').getBoundingClientRect();
+				canvas.width = positionInfo.width;
+				middle = {
+					x: canvas.width / 2,
+					y: canvas.height / 2,
+					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
+				};
+
+				ctx.strokeStyle = 'white';
+
+				for (var [label, count] of Object.entries(clients_capa)) {
+					ctx.fillStyle = string2color(clients_stats_capa_lables[label]);
+					var radian = (2 * Math.PI) * (count / clients_stats_capa_count);
+					ctx.beginPath();
+					ctx.moveTo(middle.x, middle.y);
+					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					previousRadian += radian;
+				}
+
+				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
+				ctx.beginPath();
+				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+
+				var clients_stats_capa_tooltip = function (e) {
+					var eventDoc, doc, body;
+					e = e || window.event;
+					if (e.pageX == null && e.clientX != null) {
+						eventDoc = (e.target && e.target.ownerDocument) || document;
+						doc = eventDoc.documentElement;
+						body = eventDoc.body;
+						e.pageX = e.clientX +
+							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+							(doc && doc.clientLeft || body && body.clientLeft || 0);
+						e.pageY = e.clientY +
+							(doc && doc.scrollTop || body && body.scrollTop || 0) -
+							(doc && doc.clientTop || body && body.clientTop || 0 );
+					}
+
+					var rect = this.getBoundingClientRect();
+					var x = e.clientX - rect.left;
+					var y = e.clientY - rect.top;
+					var c = this.getContext('2d', { willReadFrequently: true });
+					var p = c.getImageData(x, y, 1, 1).data;
+					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
+					setDisplay('div_clients_pie_tooltip', false);
+					for (var [label, count] of Object.entries(clients_capa)) {
+						if (string2color(clients_stats_capa_lables[label]) == hex) {
+							var e1 = document.getElementById('div_clients_pie_tooltip');
+							e1.style.top = (e.pageY + 15) + 'px';
+							e1.style.left = (e.pageX + 15) + 'px';
+							setValue('div_clients_pie_tooltip', clients_stats_capa_lables[label] + ': ' + count, false);
+							setDisplay('div_clients_pie_tooltip', true);
+							break;
+						}
+					}
+				};
+				document.getElementById('clients_stats_capa').addEventListener('mousemove', clients_stats_capa_tooltip, false);
+			}
+
 			clientspie_show();
 		}
 	}
@@ -4523,7 +4775,7 @@ function clientsstats() {
 	var cnt;
 	var sorted = sortJSON(clients, 'first_seen', 'desc');
 
-	const monthNames = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+	var monthNames = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 
 	for (var idx = 0; idx < 12; idx++) {
 		var day = new Date(countdownYear, countdownMonth, 1);
@@ -7992,7 +8244,7 @@ function shownetworks() {
 		var ports;
 		if (data.ports_mapping.length > 0) {
 			data.ports.forEach(e => {
-				const found = data.ports_mapping.find(p => p.port === e.port);
+				var found = data.ports_mapping.find(p => p.port === e.port);
 				e.id = found ? found.id : 0;
 			});
 			ports = sortJSON(data.ports, 'id', 'asc');
