@@ -4267,6 +4267,7 @@ function clientscallback(sortby) {
 		var clients_capa = {};
 		var clients_transfer_total = 0;
 		var clients_connected_total = 0;
+		var clients_signal = {};
 		for (var idx = 0, n = clients.length; idx < n; idx++) {
 			if (!clients[idx].active) {
 				clients[idx].active_id = -1;
@@ -4275,8 +4276,8 @@ function clientscallback(sortby) {
 				clients[idx].rx = 0;
 				clients[idx].percent = 0;
 				clients[idx].connected = 0;
-				continue;
 			} else {
+				counter_active ++;
 				clients[idx].first_seen = '-';
 				clients[idx].last_seen = '-';
 				if (typeof clients[idx].tx === 'undefined') {
@@ -4305,30 +4306,62 @@ function clientscallback(sortby) {
 					}
 					clients_capa[capa] = (clients_capa[capa] ?? 0) + 1;
 					clients_connected_total += clients[idx].connected;
+
+					var lower = Math.floor(parseInt(clients[idx].signal) / 10) * 10;
+					var upper = lower + 10;
+					var key = '(' + lower.toString() + ' dBm, ' + upper.toString() + ' dBm)';
+					clients_signal[key] = (clients_signal[key] || 0) + 1;
 				}
+				clients_transfer_total += clients[idx].tx + clients[idx].rx;
 			}
-			clients_transfer_total += clients[idx].tx + clients[idx].rx;
 		}
 
 		if (filterby == 'active') {
 			html += '<div class="row"><div id="div_clients_showpie" class="col-xs-12 text-right click"><span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span></div></div>';
 			html += '<div id="div_clients_stats" class="row">';
+
+			var n = 0;
+			if (clients_transfer_total > 0) { n++; }
+			if (clients_connected_total > 0) { n++; }
+			if (counter_active > 0) { n++; }
+			if (Object.keys(clients_capa).length > 0) { n++; }
+			if (Object.keys(clients_signal).length > 0) { n++; }
+
+			var idx = 0;
+			var colclass = 'col-sm-6';
 			if (clients_transfer_total > 0) {
-				html += '<div class="col-xs-12 col-sm-6">';
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
 				html += '<div id="div_clients_stats_transfer"><canvas id="clients_stats_transfer" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
 			if (clients_connected_total > 0) {
-				html += '<div class="col-xs-12 col-sm-6">';
-				html += '<div id="div_clients_stats_connected"><canvas id="clients_stats_connected" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg czasu połączenia</small></em></div></div>';
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_connected"><canvas id="clients_stats_connected" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg czasu połączenia dla klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
-			html += '<div class="col-xs-12 col-sm-6">';
-			html += '<div id="div_clients_stats_type"><canvas id="clients_stats_type" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg typu połączenia</small></em></div></div>';
-			html += '</div>';
-			if (Object.keys(clients_capa).length) {
-				html += '<div class="col-xs-12 col-sm-6">';
-				html += '<div id="div_clients_stats_capa"><canvas id="clients_stats_capa" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg standardu połączenia</small></em></div></div>';
+			if (counter_active > 0) {
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_type"><canvas id="clients_stats_type" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg typu połączenia</small></em></div></div>';
+				html += '</div>';
+			}
+			if (Object.keys(clients_capa).length > 0) {
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_capa"><canvas id="clients_stats_capa" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg standardu połączenia dla klientów bezprzewodowych</small></em></div></div>';
+				html += '</div>';
+			}
+			if (Object.keys(clients_signal).length > 0) {
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_signal"><canvas id="clients_stats_signal" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg sygnału dla klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
 			html += '<div id="div_clients_pie_tooltip" class="tooltip"></div>';
@@ -4341,7 +4374,6 @@ function clientscallback(sortby) {
 			clients[idx].displayname = (clients[idx].username != '' ? clients[idx].username : (clients[idx].dhcpname != '' ? clients[idx].dhcpname : clients[idx].mac ));
 			clients[idx].id = idx;
 			if (clients[idx].active) {
-				counter_active ++;
 				for (var idx1 = 0; idx1 < clients.length; idx1++) {
 					if (!clients[idx1].active) {
 						if (clients[idx1].mac == clients[idx].mac) {
@@ -4609,77 +4641,79 @@ function clientscallback(sortby) {
 				document.getElementById('clients_stats_connected').addEventListener('mousemove', clients_stats_connected_tooltip, false);
 			}
 
-			var clients_stats_type_lables = {
-				'wire': 'Przewodowo',
-				'wireless2': 'Bezprzewodowo ' + hrband(2),
-				'wireless5': 'Bezprzewodowo ' + hrband(5),
-				'wireless6': 'Bezprzewodowo ' + hrband(6)
-			};
-			canvas = document.getElementById('clients_stats_type');
-			ctx = canvas.getContext('2d', { willReadFrequently: true });
-			previousRadian = 1.5 * Math.PI;
-			positionInfo = document.getElementById('div_clients_stats_type').getBoundingClientRect();
-			canvas.width = positionInfo.width;
-			middle = {
-				x: canvas.width / 2,
-				y: canvas.height / 2,
-				radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-			};
+			if (counter_active > 0) {
+				var clients_stats_type_lables = {
+					'wire': 'Przewodowo',
+					'wireless2': 'Bezprzewodowo ' + hrband(2),
+					'wireless5': 'Bezprzewodowo ' + hrband(5),
+					'wireless6': 'Bezprzewodowo ' + hrband(6)
+				};
+				canvas = document.getElementById('clients_stats_type');
+				ctx = canvas.getContext('2d', { willReadFrequently: true });
+				previousRadian = 1.5 * Math.PI;
+				positionInfo = document.getElementById('div_clients_stats_type').getBoundingClientRect();
+				canvas.width = positionInfo.width;
+				middle = {
+					x: canvas.width / 2,
+					y: canvas.height / 2,
+					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
+				};
 
-			ctx.strokeStyle = 'white';
+				ctx.strokeStyle = 'white';
 
-			for (var [label, count] of Object.entries(clients_type)) {
-				ctx.fillStyle = string2color(clients_stats_type_lables[label]);
-				var radian = (2 * Math.PI) * (count / counter_active);
-				ctx.beginPath();
-				ctx.moveTo(middle.x, middle.y);
-				ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
-				ctx.closePath();
-				ctx.fill();
-				ctx.stroke();
-				previousRadian += radian;
-			}
-
-			ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
-			ctx.beginPath();
-			ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-			ctx.closePath();
-			ctx.stroke();
-
-			var clients_stats_type_tooltip = function (e) {
-				var eventDoc, doc, body;
-				e = e || window.event;
-				if (e.pageX == null && e.clientX != null) {
-					eventDoc = (e.target && e.target.ownerDocument) || document;
-					doc = eventDoc.documentElement;
-					body = eventDoc.body;
-					e.pageX = e.clientX +
-						(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-						(doc && doc.clientLeft || body && body.clientLeft || 0);
-					e.pageY = e.clientY +
-						(doc && doc.scrollTop || body && body.scrollTop || 0) -
-						(doc && doc.clientTop || body && body.clientTop || 0 );
-				}
-
-				var rect = this.getBoundingClientRect();
-				var x = e.clientX - rect.left;
-				var y = e.clientY - rect.top;
-				var c = this.getContext('2d', { willReadFrequently: true });
-				var p = c.getImageData(x, y, 1, 1).data;
-				var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-				setDisplay('div_clients_pie_tooltip', false);
 				for (var [label, count] of Object.entries(clients_type)) {
-					if (string2color(clients_stats_type_lables[label]) == hex) {
-						var e1 = document.getElementById('div_clients_pie_tooltip');
-						e1.style.top = (e.pageY + 15) + 'px';
-						e1.style.left = (e.pageX + 15) + 'px';
-						setValue('div_clients_pie_tooltip', clients_stats_type_lables[label] + ': ' + count, false);
-						setDisplay('div_clients_pie_tooltip', true);
-						break;
-					}
+					ctx.fillStyle = string2color(clients_stats_type_lables[label]);
+					var radian = (2 * Math.PI) * (count / counter_active);
+					ctx.beginPath();
+					ctx.moveTo(middle.x, middle.y);
+					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					previousRadian += radian;
 				}
-			};
-			document.getElementById('clients_stats_type').addEventListener('mousemove', clients_stats_type_tooltip, false);
+
+				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
+				ctx.beginPath();
+				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+
+				var clients_stats_type_tooltip = function (e) {
+					var eventDoc, doc, body;
+					e = e || window.event;
+					if (e.pageX == null && e.clientX != null) {
+						eventDoc = (e.target && e.target.ownerDocument) || document;
+						doc = eventDoc.documentElement;
+						body = eventDoc.body;
+						e.pageX = e.clientX +
+							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+							(doc && doc.clientLeft || body && body.clientLeft || 0);
+						e.pageY = e.clientY +
+							(doc && doc.scrollTop || body && body.scrollTop || 0) -
+							(doc && doc.clientTop || body && body.clientTop || 0 );
+					}
+
+					var rect = this.getBoundingClientRect();
+					var x = e.clientX - rect.left;
+					var y = e.clientY - rect.top;
+					var c = this.getContext('2d', { willReadFrequently: true });
+					var p = c.getImageData(x, y, 1, 1).data;
+					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
+					setDisplay('div_clients_pie_tooltip', false);
+					for (var [label, count] of Object.entries(clients_type)) {
+						if (string2color(clients_stats_type_lables[label]) == hex) {
+							var e1 = document.getElementById('div_clients_pie_tooltip');
+							e1.style.top = (e.pageY + 15) + 'px';
+							e1.style.left = (e.pageX + 15) + 'px';
+							setValue('div_clients_pie_tooltip', clients_stats_type_lables[label] + ': ' + count, false);
+							setDisplay('div_clients_pie_tooltip', true);
+							break;
+						}
+					}
+				};
+				document.getElementById('clients_stats_type').addEventListener('mousemove', clients_stats_type_tooltip, false);
+			}
 
 			if (Object.keys(clients_capa).length) {
 				var clients_stats_capa_lables = {
@@ -4759,6 +4793,78 @@ function clientscallback(sortby) {
 					}
 				};
 				document.getElementById('clients_stats_capa').addEventListener('mousemove', clients_stats_capa_tooltip, false);
+			}
+
+			if (Object.keys(clients_signal).length) {
+				var clients_stats_signal_count = 0;
+				for (var [label, count] of Object.entries(clients_signal)) {
+					clients_stats_signal_count += count;
+				}
+				canvas = document.getElementById('clients_stats_signal');
+				ctx = canvas.getContext('2d', { willReadFrequently: true });
+				previousRadian = 1.5 * Math.PI;
+				positionInfo = document.getElementById('div_clients_stats_signal').getBoundingClientRect();
+				canvas.width = positionInfo.width;
+				middle = {
+					x: canvas.width / 2,
+					y: canvas.height / 2,
+					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
+				};
+
+				ctx.strokeStyle = 'white';
+
+				for (var [label, count] of Object.entries(clients_signal)) {
+					ctx.fillStyle = string2color(label);
+					var radian = (2 * Math.PI) * (count / clients_stats_signal_count);
+					ctx.beginPath();
+					ctx.moveTo(middle.x, middle.y);
+					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					previousRadian += radian;
+				}
+
+				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
+				ctx.beginPath();
+				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+
+				var clients_stats_signal_tooltip = function (e) {
+					var eventDoc, doc, body;
+					e = e || window.event;
+					if (e.pageX == null && e.clientX != null) {
+						eventDoc = (e.target && e.target.ownerDocument) || document;
+						doc = eventDoc.documentElement;
+						body = eventDoc.body;
+						e.pageX = e.clientX +
+							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+							(doc && doc.clientLeft || body && body.clientLeft || 0);
+						e.pageY = e.clientY +
+							(doc && doc.scrollTop || body && body.scrollTop || 0) -
+							(doc && doc.clientTop || body && body.clientTop || 0 );
+					}
+
+					var rect = this.getBoundingClientRect();
+					var x = e.clientX - rect.left;
+					var y = e.clientY - rect.top;
+					var c = this.getContext('2d', { willReadFrequently: true });
+					var p = c.getImageData(x, y, 1, 1).data;
+					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
+					setDisplay('div_clients_pie_tooltip', false);
+					for (var [label, count] of Object.entries(clients_signal)) {
+						if (string2color(label) == hex) {
+							var e1 = document.getElementById('div_clients_pie_tooltip');
+							e1.style.top = (e.pageY + 15) + 'px';
+							e1.style.left = (e.pageX + 15) + 'px';
+							setValue('div_clients_pie_tooltip', label + ': ' + count, false);
+							setDisplay('div_clients_pie_tooltip', true);
+							break;
+						}
+					}
+				};
+				document.getElementById('clients_stats_signal').addEventListener('mousemove', clients_stats_signal_tooltip, false);
 			}
 
 			clientspie_show();
