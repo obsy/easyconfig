@@ -4114,33 +4114,7 @@ function bytesToSize(bytes) {
 	return parseFloat((bytes / Math.pow(1024, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-function clientspie_toggle() {
-	var showclientspie = getCookie('easyconfig_clients_stats');
-	if (showclientspie === '0') {
-		setDisplay('div_clients_stats', true);
-		setCookie('easyconfig_clients_stats', '1');
-		setValue('div_clients_showpie', '<span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
-	} else {
-		setDisplay('div_clients_stats', false);
-		setCookie('easyconfig_clients_stats', '0');
-		setValue('div_clients_showpie', '<span class="click" title="pokaż wykresy" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
-	}
-	showicon();
-}
-
-function clientspie_show() {
-	var showclientspie = getCookie('easyconfig_clients_stats');
-	if (showclientspie === '0') {
-		setDisplay('div_clients_stats', false);
-		setValue('div_clients_showpie', '<span class="click" title="pokaż wykresy" onclick="clientspie_toggle();"><i data-feather="eye"></i></span>');
-	} else {
-		setDisplay('div_clients_stats', true);
-		setValue('div_clients_showpie', '<span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span>');
-	}
-	showicon();
-}
-
-var clients;
+var clients = {};
 var remote_clients;
 var remote_hosts;
 
@@ -4188,6 +4162,16 @@ function clientscallbackfilterall(filterbyall) {
 	setCookie('easyconfig_clients_filterbyall', filterbyall);
 }
 
+function clientscallbackshowtype(showtype) {
+	var all = ['table', 'graph'];
+	for (var idx = 0; idx < all.length; idx++) {
+		var e = document.getElementById('clients_showtype_' + all[idx]);
+		if (e)
+			e.classList.toggle('select-option-active', showtype == all[idx]);
+	}
+	setCookie('easyconfig_clients_showtype', showtype);
+}
+
 function clientscallback(sortby) {
 	var all;
 	var filterby = getCookie('easyconfig_clients_filterby');
@@ -4195,6 +4179,9 @@ function clientscallback(sortby) {
 
 	var filterbyall = getCookie('easyconfig_clients_filterbyall');
 	if (filterbyall == '') { filterbyall = 'all'; }
+
+	var showtype = getCookie('easyconfig_clients_showtype');
+	if (showtype == '') { showtype = 'table'; }
 
 	if (sortby == '') {
 		if (filterby == 'active') {
@@ -4246,8 +4233,14 @@ function clientscallback(sortby) {
 			html += '<span id="clients_filterall_year" class="select-option" onclick="clientscallbackfilterall(\'year\');clientscallback(\'\');">z ostatniego roku (0)</span>';
 			html += '<span id="clients_filterall_all" class="select-option" onclick="clientscallbackfilterall(\'all\');clientscallback(\'\');">wszystko (0)</span>';
 			html += '</div>'
+		} else {
+			html += '<div class="col-xs-12 space">';
+			html += '<span>Pokaż</span>';
+			html += '<span id="clients_showtype_table" class="select-option" onclick="clientscallbackshowtype(\'table\');clientscallback(\'\');">tabelę</span>';
+			html += '<span id="clients_showtype_graph" class="select-option" onclick="clientscallbackshowtype(\'graph\');clientscallback(\'\');">wykresy</span>';
+			html += '</div>'
 		}
-		html += '<div class="col-xs-12">';
+		html += '<div class="col-xs-12 space">';
 		html += '<span>Sortowanie po</span>';
 		html += '<span id="clients_sortby_displayname" class="select-option" onclick="clientscallback(\'displayname\');">nazwie</span>';
 		if (filterby == 'active') {
@@ -4317,8 +4310,7 @@ function clientscallback(sortby) {
 		}
 
 		if (filterby == 'active') {
-			html += '<div class="row"><div id="div_clients_showpie" class="col-xs-12 text-right click"><span class="click" title="ukryj wykresy" onclick="clientspie_toggle();"><i data-feather="eye-off"></i></span></div></div>';
-			html += '<div id="div_clients_stats" class="row">';
+			html += '<div id="div_clients_graph"><hr><div class="row">';
 
 			var n = 0;
 			if (clients_transfer_total > 0) { n++; }
@@ -4365,7 +4357,7 @@ function clientscallback(sortby) {
 				html += '</div>';
 			}
 			html += '<div id="div_clients_pie_tooltip" class="tooltip"></div>';
-			html += '</div>';
+			html += '</div></div>';
 		}
 
 		for (var idx = 0, n = clients.length; idx < n; idx++) {
@@ -4402,6 +4394,7 @@ function clientscallback(sortby) {
 		} else {
 			sorted = sortJSON(clients, sortby, 'asc');
 		}
+		html += '<div id="div_clients_table">';
 		for (var idx = 0, n = sorted.length; idx < n; idx++) {
 			if (filterby == 'active') {
 				if (!sorted[idx].active) { continue; }
@@ -4480,6 +4473,7 @@ function clientscallback(sortby) {
 				any_all = true;
 			}
 		}
+		html += '</div>';
 	}
 	if (filterby == 'active') {
 		if (!any_active) {
@@ -4505,6 +4499,12 @@ function clientscallback(sortby) {
 			if (e)
 				e.classList.toggle('select-option-active', filterbyall == all[idx]);
 		}
+		all = ['table', 'graph'];
+		for (var idx = 0; idx < all.length; idx++) {
+			var e = document.getElementById('clients_showtype_' + all[idx]);
+			if (e)
+				e.classList.toggle('select-option-active', showtype == all[idx]);
+		}
 		showicon();
 
 		setValue('clients_filter_active', 'aktywni (' + counter_active + ')');
@@ -4515,359 +4515,146 @@ function clientscallback(sortby) {
 			setValue('clients_filterall_month', 'z ostatnich 30 dni (' + counter_all_month + ')');
 			setValue('clients_filterall_year', 'z ostatniego roku (' + counter_all_year + ')');
 			setValue('clients_filterall_all', 'wszystko (' + counter_all_all + ')');
+		} else {
+			setDisplay('div_clients_table', showtype == 'table');
+			setDisplay('div_clients_graph', showtype == 'graph');
 		}
 		clientscallbackfilter(filterby);
 
-		if (filterby == 'active') {
-			if (clients_transfer_total > 0) {
-				var canvas = document.getElementById('clients_stats_transfer');
-				var ctx = canvas.getContext('2d', { willReadFrequently: true });
-				var previousRadian = 1.5 * Math.PI;
-				var positionInfo = document.getElementById('div_clients_stats_transfer').getBoundingClientRect();
-				canvas.width = positionInfo.width;
-				var middle = {
-					x: canvas.width / 2,
-					y: canvas.height / 2,
-					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-				};
+		if (filterby == 'active' && showtype == 'graph') {
 
+			function drawPie(canvasId, containerId, slices, holeRatio) {
+				var canvas = document.getElementById(canvasId);
+				var container = document.getElementById(containerId);
+				var ctx = canvas.getContext('2d');
+				var tooltipId = 'div_clients_pie_tooltip';
+
+				if (holeRatio === undefined) { holeRatio = 0; }
+
+				canvas.width = container.getBoundingClientRect().width;
+				var cx = canvas.width / 2;
+				var cy = canvas.height / 2;
+				var radius = Math.min(cx, cy) - 10;
+				var inner = radius * holeRatio;
+				var total = slices.reduce(function (sum, s) { return sum + s.value; }, 0);
+				if (total <= 0) { return; }
+
+				var angle = -Math.PI / 2;
 				ctx.strokeStyle = 'white';
-				for (var idx = 0; idx < sorted.length; idx++) {
-					if (!sorted[idx].active) { continue; }
-					ctx.fillStyle = string2color(sorted[idx].mac);
-					var radian = (2 * Math.PI) * ((sorted[idx].tx + sorted[idx].rx) / clients_transfer_total);
+				for (var i = 0; i < slices.length; i++) {
+					var s = slices[i];
+					s.start = angle;
+					s.end = angle + 2 * Math.PI * (s.value / total);
+					ctx.fillStyle = s.color;
 					ctx.beginPath();
-					ctx.moveTo(middle.x, middle.y);
-					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
+					ctx.arc(cx, cy, radius, s.start, s.end, false);
+					ctx.arc(cx, cy, inner, s.end, s.start, true);
 					ctx.closePath();
 					ctx.fill();
 					ctx.stroke();
-					previousRadian += radian;
+					angle = s.end;
 				}
 
 				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
 				ctx.beginPath();
-				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-				ctx.closePath();
+				ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.arc(cx, cy, inner, 0, 2 * Math.PI);
 				ctx.stroke();
 
-				var clients_stats_transfer_tooltip = function (e) {
-					var rect = this.getBoundingClientRect();
-					var x = e.clientX - rect.left;
-					var y = e.clientY - rect.top;
-					var c = this.getContext('2d', { willReadFrequently: true });
-					var p = c.getImageData(x, y, 1, 1).data;
-					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-					setDisplay('div_clients_pie_tooltip', false);
+				canvas.onmousemove = function (e) {
+					var rect = canvas.getBoundingClientRect();
+					var dx = (e.clientX - rect.left) * (canvas.width / rect.width) - cx;
+					var dy = (e.clientY - rect.top) * (canvas.height / rect.height) - cy;
+					var d2 = dx * dx + dy * dy;
+					var slice = null;
 
-					for (var idx = 0, n = sorted.length; idx < n; idx++) {
-						if (!sorted[idx].active) { continue; }
-						if (string2color(sorted[idx].mac) == hex) {
-							var e1 = document.getElementById('div_clients_pie_tooltip');
-							var offsetParent = e1.offsetParent || document.body;
-							var parentRect = offsetParent.getBoundingClientRect();
-							var left = e.clientX - parentRect.left + offsetParent.scrollLeft + 15;
-							var top  = e.clientY - parentRect.top + offsetParent.scrollTop + 15;
-
-							e1.style.top = top + 'px';
-							e1.style.left = left + 'px';
-							setValue('div_clients_pie_tooltip', escapeHTML(sorted[idx].displayname) + ': ' + bytesToSize(sorted[idx].tx + sorted[idx].rx) + ' (' + sorted[idx].percent + '%), połączony ' + formatDuration(sorted[idx].connected, false));
-							setDisplay('div_clients_pie_tooltip', true);
-							break;
+					if (d2 <= radius * radius && d2 >= inner * inner) {   // tylko w obrębie pierścienia
+						var a = Math.atan2(dy, dx);
+						if (a < -Math.PI / 2) { a += 2 * Math.PI; }
+						for (var j = 0; j < slices.length; j++) {
+							if (a >= slices[j].start && a < slices[j].end) {
+								slice = slices[j];
+								break;
+							}
 						}
 					}
+
+					if (!slice) { setDisplay(tooltipId, false); return; }
+
+					var tip = document.getElementById(tooltipId);
+					var parent = tip.offsetParent || document.body;
+					var pr = parent.getBoundingClientRect();
+					tip.style.left = (e.clientX - pr.left + parent.scrollLeft + 15) + 'px';
+					tip.style.top  = (e.clientY - pr.top  + parent.scrollTop  + 15) + 'px';
+					setValue(tooltipId, slice.label, false);
+					setDisplay(tooltipId, true);
 				};
-				document.getElementById('clients_stats_transfer').addEventListener('mousemove', clients_stats_transfer_tooltip, false);
+				canvas.onmouseleave = function () { setDisplay(tooltipId, false); };
+			}
+
+			function objToSlices(obj, names) {
+				names = names || {};
+				return Object.entries(obj)
+					.sort(function (x, y) { return x[0] > y[0] ? 1 : (x[0] < y[0] ? -1 : 0); })
+					.map(function (entry) {
+						var name = names[entry[0]] || entry[0];
+						return { value: entry[1], color: string2color(name), label: name + ': ' + entry[1] };
+					});
+			}
+
+			var active_clients = sorted.filter(function (c) { return c.active && c.type == 2; });
+
+			if (clients_transfer_total > 0) {
+				drawPie('clients_stats_transfer', 'div_clients_stats_transfer',
+					active_clients.map(function (c) {
+						return {
+							value: c.tx + c.rx,
+							color: string2color(c.mac),
+							label: escapeHTML(c.displayname) + ': ' + bytesToSize(c.tx + c.rx) +
+								' (' + c.percent + '%), połączony ' + formatDuration(c.connected, false)
+						};
+					}));
 			}
 
 			if (clients_connected_total > 0) {
-				var canvas = document.getElementById('clients_stats_connected');
-				var ctx = canvas.getContext('2d', { willReadFrequently: true });
-				var previousRadian = 1.5 * Math.PI;
-				var positionInfo = document.getElementById('div_clients_stats_connected').getBoundingClientRect();
-				canvas.width = positionInfo.width;
-				var middle = {
-					x: canvas.width / 2,
-					y: canvas.height / 2,
-					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-				};
-
-				ctx.strokeStyle = 'white';
-				for (var idx = 0; idx < sorted.length; idx++) {
-					if (!sorted[idx].active) { continue; }
-					ctx.fillStyle = string2color(sorted[idx].mac);
-					var radian = (2 * Math.PI) * (sorted[idx].connected / clients_connected_total);
-					ctx.beginPath();
-					ctx.moveTo(middle.x, middle.y);
-					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
-					ctx.closePath();
-					ctx.fill();
-					ctx.stroke();
-					previousRadian += radian;
-				}
-
-				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
-				ctx.beginPath();
-				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-				ctx.closePath();
-				ctx.stroke();
-
-				var clients_stats_connected_tooltip = function (e) {
-					var rect = this.getBoundingClientRect();
-					var x = e.clientX - rect.left;
-					var y = e.clientY - rect.top;
-					var c = this.getContext('2d', { willReadFrequently: true });
-					var p = c.getImageData(x, y, 1, 1).data;
-					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-					setDisplay('div_clients_pie_tooltip', false);
-
-					for (var idx = 0, n = sorted.length; idx < n; idx++) {
-						if (!sorted[idx].active) { continue; }
-						if (string2color(sorted[idx].mac) == hex) {
-							var e1 = document.getElementById('div_clients_pie_tooltip');
-							var offsetParent = e1.offsetParent || document.body;
-							var parentRect = offsetParent.getBoundingClientRect();
-							var left = e.clientX - parentRect.left + offsetParent.scrollLeft + 15;
-							var top  = e.clientY - parentRect.top + offsetParent.scrollTop + 15;
-
-							e1.style.top = top + 'px';
-							e1.style.left = left + 'px';
-							setValue('div_clients_pie_tooltip', escapeHTML(sorted[idx].displayname) + ': ' + (formatDuration(sorted[idx].connected)).trim() + ', ' + bytesToSize(sorted[idx].tx + sorted[idx].rx) + ' (' + sorted[idx].percent + '%)', false);
-							setDisplay('div_clients_pie_tooltip', true);
-							break;
-						}
-					}
-				};
-				document.getElementById('clients_stats_connected').addEventListener('mousemove', clients_stats_connected_tooltip, false);
+				drawPie('clients_stats_connected', 'div_clients_stats_connected',
+					active_clients.map(function (c) {
+						return {
+							value: c.connected,
+							color: string2color(c.mac),
+							label: escapeHTML(c.displayname) + ': ' + formatDuration(c.connected).trim() + ', ' +
+								bytesToSize(c.tx + c.rx) + ' (' + c.percent + '%)'
+						};
+					}));
 			}
 
 			if (counter_active > 0) {
-				var clients_stats_type_lables = {
-					'wire': 'Przewodowo',
-					'wireless2': 'Bezprzewodowo ' + hrband(2),
-					'wireless5': 'Bezprzewodowo ' + hrband(5),
-					'wireless6': 'Bezprzewodowo ' + hrband(6)
-				};
-				canvas = document.getElementById('clients_stats_type');
-				ctx = canvas.getContext('2d', { willReadFrequently: true });
-				previousRadian = 1.5 * Math.PI;
-				positionInfo = document.getElementById('div_clients_stats_type').getBoundingClientRect();
-				canvas.width = positionInfo.width;
-				middle = {
-					x: canvas.width / 2,
-					y: canvas.height / 2,
-					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-				};
-
-				ctx.strokeStyle = 'white';
-
-				for (var [label, count] of Object.entries(clients_type)) {
-					ctx.fillStyle = string2color(clients_stats_type_lables[label]);
-					var radian = (2 * Math.PI) * (count / counter_active);
-					ctx.beginPath();
-					ctx.moveTo(middle.x, middle.y);
-					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
-					ctx.closePath();
-					ctx.fill();
-					ctx.stroke();
-					previousRadian += radian;
-				}
-
-				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
-				ctx.beginPath();
-				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-				ctx.closePath();
-				ctx.stroke();
-
-				var clients_stats_type_tooltip = function (e) {
-					var eventDoc, doc, body;
-					e = e || window.event;
-					if (e.pageX == null && e.clientX != null) {
-						eventDoc = (e.target && e.target.ownerDocument) || document;
-						doc = eventDoc.documentElement;
-						body = eventDoc.body;
-						e.pageX = e.clientX +
-							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-							(doc && doc.clientLeft || body && body.clientLeft || 0);
-						e.pageY = e.clientY +
-							(doc && doc.scrollTop || body && body.scrollTop || 0) -
-							(doc && doc.clientTop || body && body.clientTop || 0 );
-					}
-
-					var rect = this.getBoundingClientRect();
-					var x = e.clientX - rect.left;
-					var y = e.clientY - rect.top;
-					var c = this.getContext('2d', { willReadFrequently: true });
-					var p = c.getImageData(x, y, 1, 1).data;
-					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-					setDisplay('div_clients_pie_tooltip', false);
-					for (var [label, count] of Object.entries(clients_type)) {
-						if (string2color(clients_stats_type_lables[label]) == hex) {
-							var e1 = document.getElementById('div_clients_pie_tooltip');
-							e1.style.top = (e.pageY + 15) + 'px';
-							e1.style.left = (e.pageX + 15) + 'px';
-							setValue('div_clients_pie_tooltip', clients_stats_type_lables[label] + ': ' + count, false);
-							setDisplay('div_clients_pie_tooltip', true);
-							break;
-						}
-					}
-				};
-				document.getElementById('clients_stats_type').addEventListener('mousemove', clients_stats_type_tooltip, false);
+				drawPie('clients_stats_type', 'div_clients_stats_type',
+					objToSlices(clients_type, {
+						wire: 'Przewodowo',
+						wireless2: 'Bezprzewodowo ' + hrband(2),
+						wireless5: 'Bezprzewodowo ' + hrband(5),
+						wireless6: 'Bezprzewodowo ' + hrband(6)
+					}));
 			}
 
 			if (Object.keys(clients_capa).length) {
-				var clients_stats_capa_lables = {
-					'0': 'nieznane',
-					'4': 'Wi-Fi 4 (802.11n)',
-					'5': 'Wi-Fi 5 (802.11ac)',
-					'6': 'Wi-Fi 6 (802.11ax)',
-					'6e': 'Wi-Fi 6E (802.11ax)',
-					'7': 'Wi-Fi 7 (802.11be)'
-				};
-				var clients_stats_capa_count = 0;
-				for (var [label, count] of Object.entries(clients_capa)) {
-					clients_stats_capa_count += count;
-				}
-				canvas = document.getElementById('clients_stats_capa');
-				ctx = canvas.getContext('2d', { willReadFrequently: true });
-				previousRadian = 1.5 * Math.PI;
-				positionInfo = document.getElementById('div_clients_stats_capa').getBoundingClientRect();
-				canvas.width = positionInfo.width;
-				middle = {
-					x: canvas.width / 2,
-					y: canvas.height / 2,
-					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-				};
-
-				ctx.strokeStyle = 'white';
-
-				for (var [label, count] of Object.entries(clients_capa)) {
-					ctx.fillStyle = string2color(clients_stats_capa_lables[label]);
-					var radian = (2 * Math.PI) * (count / clients_stats_capa_count);
-					ctx.beginPath();
-					ctx.moveTo(middle.x, middle.y);
-					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
-					ctx.closePath();
-					ctx.fill();
-					ctx.stroke();
-					previousRadian += radian;
-				}
-
-				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
-				ctx.beginPath();
-				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-				ctx.closePath();
-				ctx.stroke();
-
-				var clients_stats_capa_tooltip = function (e) {
-					var eventDoc, doc, body;
-					e = e || window.event;
-					if (e.pageX == null && e.clientX != null) {
-						eventDoc = (e.target && e.target.ownerDocument) || document;
-						doc = eventDoc.documentElement;
-						body = eventDoc.body;
-						e.pageX = e.clientX +
-							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-							(doc && doc.clientLeft || body && body.clientLeft || 0);
-						e.pageY = e.clientY +
-							(doc && doc.scrollTop || body && body.scrollTop || 0) -
-							(doc && doc.clientTop || body && body.clientTop || 0 );
-					}
-
-					var rect = this.getBoundingClientRect();
-					var x = e.clientX - rect.left;
-					var y = e.clientY - rect.top;
-					var c = this.getContext('2d', { willReadFrequently: true });
-					var p = c.getImageData(x, y, 1, 1).data;
-					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-					setDisplay('div_clients_pie_tooltip', false);
-					for (var [label, count] of Object.entries(clients_capa)) {
-						if (string2color(clients_stats_capa_lables[label]) == hex) {
-							var e1 = document.getElementById('div_clients_pie_tooltip');
-							e1.style.top = (e.pageY + 15) + 'px';
-							e1.style.left = (e.pageX + 15) + 'px';
-							setValue('div_clients_pie_tooltip', clients_stats_capa_lables[label] + ': ' + count, false);
-							setDisplay('div_clients_pie_tooltip', true);
-							break;
-						}
-					}
-				};
-				document.getElementById('clients_stats_capa').addEventListener('mousemove', clients_stats_capa_tooltip, false);
+				drawPie('clients_stats_capa', 'div_clients_stats_capa',
+					objToSlices(clients_capa, {
+						'0': 'nieznane',
+						'4': 'Wi-Fi 4 (802.11n)',
+						'5': 'Wi-Fi 5 (802.11ac)',
+						'6': 'Wi-Fi 6 (802.11ax)',
+						'6e': 'Wi-Fi 6E (802.11ax)',
+						'7': 'Wi-Fi 7 (802.11be)'
+					}));
 			}
 
 			if (Object.keys(clients_signal).length) {
-				var clients_stats_signal_count = 0;
-				for (var [label, count] of Object.entries(clients_signal)) {
-					clients_stats_signal_count += count;
-				}
-				canvas = document.getElementById('clients_stats_signal');
-				ctx = canvas.getContext('2d', { willReadFrequently: true });
-				previousRadian = 1.5 * Math.PI;
-				positionInfo = document.getElementById('div_clients_stats_signal').getBoundingClientRect();
-				canvas.width = positionInfo.width;
-				middle = {
-					x: canvas.width / 2,
-					y: canvas.height / 2,
-					radius: (Math.min(canvas.width, canvas.height) / 2) - 10,
-				};
-
-				ctx.strokeStyle = 'white';
-
-				for (var [label, count] of Object.entries(clients_signal)) {
-					ctx.fillStyle = string2color(label);
-					var radian = (2 * Math.PI) * (count / clients_stats_signal_count);
-					ctx.beginPath();
-					ctx.moveTo(middle.x, middle.y);
-					ctx.arc(middle.x, middle.y, middle.radius, previousRadian, previousRadian + radian, false);
-					ctx.closePath();
-					ctx.fill();
-					ctx.stroke();
-					previousRadian += radian;
-				}
-
-				ctx.strokeStyle = (getCookie('easyconfig_darkmode') == '1' ? 'white' : 'black');
-				ctx.beginPath();
-				ctx.arc(middle.x, middle.y, middle.radius, 0, 2 * Math.PI);
-				ctx.closePath();
-				ctx.stroke();
-
-				var clients_stats_signal_tooltip = function (e) {
-					var eventDoc, doc, body;
-					e = e || window.event;
-					if (e.pageX == null && e.clientX != null) {
-						eventDoc = (e.target && e.target.ownerDocument) || document;
-						doc = eventDoc.documentElement;
-						body = eventDoc.body;
-						e.pageX = e.clientX +
-							(doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-							(doc && doc.clientLeft || body && body.clientLeft || 0);
-						e.pageY = e.clientY +
-							(doc && doc.scrollTop || body && body.scrollTop || 0) -
-							(doc && doc.clientTop || body && body.clientTop || 0 );
-					}
-
-					var rect = this.getBoundingClientRect();
-					var x = e.clientX - rect.left;
-					var y = e.clientY - rect.top;
-					var c = this.getContext('2d', { willReadFrequently: true });
-					var p = c.getImageData(x, y, 1, 1).data;
-					var hex = rgb2hex('rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')');
-					setDisplay('div_clients_pie_tooltip', false);
-					for (var [label, count] of Object.entries(clients_signal)) {
-						if (string2color(label) == hex) {
-							var e1 = document.getElementById('div_clients_pie_tooltip');
-							e1.style.top = (e.pageY + 15) + 'px';
-							e1.style.left = (e.pageX + 15) + 'px';
-							setValue('div_clients_pie_tooltip', label + ': ' + count, false);
-							setDisplay('div_clients_pie_tooltip', true);
-							break;
-						}
-					}
-				};
-				document.getElementById('clients_stats_signal').addEventListener('mousemove', clients_stats_signal_tooltip, false);
+				drawPie('clients_stats_signal', 'div_clients_stats_signal', objToSlices(clients_signal));
 			}
-
-			clientspie_show();
 		}
 	}
 }
