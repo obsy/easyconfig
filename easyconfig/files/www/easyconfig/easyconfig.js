@@ -8865,24 +8865,27 @@ function savesecurity() {
 		var dropbear_restart_required = false;
 		var firewall_restart_required = false;
 
-		tmp = (getValue('dropbear_enable') ? '1' : '0');
-		if (data.result.dropbear_enable != tmp) {
-			cmd.push('uci set dropbear.main.enable=' + tmp);
-			dropbear_restart_required = true;
-		}
-		tmp = (getValue('dropbear_passwordauth') ? 'on' : 'off');
-		if (data.result.dropbear_passwordauth != tmp) {
-			cmd.push('uci set dropbear.main.PasswordAuth=' + tmp);
-			dropbear_restart_required = true;
-		}
-		tmp = getValue('dropbear_port');
-		if (data.result.dropbear_port != tmp) {
-			cmd.push('uci set dropbear.main.Port=' + tmp);
-			if (data.result.firewall_wanssh_section) {
-				cmd.push('uci set firewall.' + data.result.firewall_wanssh_section + '.dest_port=' + tmp);
-				firewall_restart_required = true;
+		var dsec = data.result.dropbear_section;
+		if (dsec) {
+			tmp = (getValue('dropbear_enable') ? '1' : '0');
+			if (data.result.dropbear_enable != tmp) {
+				cmd.push('uci set dropbear.' + dsec + '.enable=' + tmp);
+				dropbear_restart_required = true;
 			}
-			dropbear_restart_required = true;
+			tmp = (getValue('dropbear_passwordauth') ? 'on' : 'off');
+			if (data.result.dropbear_passwordauth != tmp) {
+				cmd.push('uci set dropbear.' + dsec + '.PasswordAuth=' + tmp);
+				dropbear_restart_required = true;
+			}
+			tmp = getValue('dropbear_port');
+			if (data.result.dropbear_port != tmp) {
+				cmd.push('uci set dropbear.' + dsec + '.Port=' + tmp);
+				if (data.result.firewall_wanssh_section) {
+					cmd.push('uci set firewall.' + data.result.firewall_wanssh_section + '.dest_port=' + tmp);
+					firewall_restart_required = true;
+				}
+				dropbear_restart_required = true;
+			}
 		}
 
 		tmp = getValue('firewall_wanssh_port');

@@ -2562,14 +2562,37 @@ findfirewallredirect() {
 
 security() {
 	echo '{"result":{'
-	echo '"dropbear_enable":"'$(uci -q get dropbear.main.enable)'",'
-	echo '"dropbear_passwordauth":"'$(uci -q get dropbear.main.PasswordAuth)'",'
-	SSHP=$(uci -q get dropbear.main.Port)
-	echo '"dropbear_port":"'$SSHP'",'
-	HTTPP=$(uci -q -d, get uhttpd.main.listen_http | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
-	echo '"uhttpd_listen_http":"'$HTTPP'",'
-	HTTPSP=$(uci -q -d, get uhttpd.main.listen_https | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
-	echo '"uhttpd_listen_https":"'$HTTPSP'",'
+
+	SSHSEC=$(findsection dropbear dropbear Interface lan)
+	if [ -z "$SSHSEC" ]; then
+		SECS="main @dropbear[0]"
+		for SEC in $SECS; do
+			T=$(uci -q get dropbear.$SEC)
+			if [ "x$T" = "xdropbear" ]; then
+				SSHSEC=$SEC
+				break
+			fi
+		done
+	fi
+	echo '"dropbear_section":"'$SSHSEC'",'
+	if [ -z "$SSHSEC" ]; then
+		SSHE=""
+		SSHPA=""
+		SSHP=""
+	else
+		SSHE=$(uci -q get dropbear.$SSHSEC.enable)
+		SSHPA=$(uci -q get dropbear.$SSHSEC.PasswordAuth)
+		SSHP=$(uci -q get dropbear.$SSHSEC.Port)
+	fi
+	echo '"dropbear_enable":"'${SSHE:-1}'",'
+	echo '"dropbear_passwordauth":"'${SSHPA:-1}'",'
+	echo '"dropbear_port":"'${SSHP:-22}'",'
+
+#	HTTPP=$(uci -q -d, get uhttpd.main.listen_http | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
+#	echo '"uhttpd_listen_http":"'$HTTPP'",'
+#	HTTPSP=$(uci -q -d, get uhttpd.main.listen_https | awk -F, '{for(i=1;i<=NF;i++)if($i~/.*\..*\..*\..*:/){gsub(/^.*:/,"");print $i; break}}')
+#	echo '"uhttpd_listen_https":"'$HTTPSP'",'
+
 	echo '"system_ttylogin":"'$(uci -q get system.@system[0].ttylogin)'",'
 
 	WANSSHP=""
