@@ -4797,14 +4797,23 @@ function clientslogscallback(first, last) {
 	if (filtered.length > 0) {
 		setValue('clientslogs_hosts', selected);
 		if (selected != 'all') {
+			var ignorefirst = false;
 			var timelinelogs_arr = []; timelinelogs_arr[0] = [];
 			var min = filtered[0].id * 1 - 86400;
+			var prev = null;
 			for (var idx = filtered.length - 1; idx > -1; idx--) {
 				if (filtered[idx].id * 1 > min) {
+					if (prev !== null) {
+						ignorefirst = true;
+						timelinelogs_arr[0].push([min * 1000, (prev == 'connect' ? 1 : 0)]);
+						prev = null;
+					}
 					timelinelogs_arr[0].push([filtered[idx].id * 1000, (filtered[idx].event == 'connect' ? 1 : 0)]);
+				} else {
+					prev = filtered[idx].event;
 				}
 			}
-			staticgraph.draw({element: 'timelinelogs', data: timelinelogs_arr, legend: [{color:'blue'}]});
+			staticgraph.draw({element: 'timelinelogs', data: timelinelogs_arr, ignorefirst: ignorefirst, legend: [{color:'blue'}]});
 		}
 	}
 }
@@ -9307,6 +9316,7 @@ var staticgraph = {
 				graph.time = data[0][data[0].length - 1][0];
 			}
 			for (var i = 0; i < data[0].length; i++) {
+				if (i == 0 && graph.ignorefirst) { continue; }
 				var x = staticgraph.getX(graph, data[0][i][0]);
 				if (oldwidth < x) {
 					var t = new Date(data[0][i][0]);
@@ -9323,8 +9333,17 @@ var staticgraph = {
 			ctx.beginPath();
 			var x = staticgraph.getX(graph, data[idx][0][0]);
 			var y = staticgraph.getY(graph, data[idx][0][1]);
-			ctx.moveTo(x, staticgraph.axisTop + graph.height);
-			ctx.lineTo(x, y);
+			if (fill) {
+				ctx.moveTo(x, staticgraph.axisTop + graph.height);
+				ctx.lineTo(x, y);
+			} else {
+				if (graph.ignorefirst) {
+					ctx.moveTo(x, y);
+				} else {
+					ctx.moveTo(x, staticgraph.axisTop + graph.height);
+					ctx.lineTo(x, y);
+				}
+			}
 			for (var i = 1; i < data[idx].length; i++) {
 				x = staticgraph.getX(graph, data[idx][i][0]);
 				y = staticgraph.getY(graph, data[idx][i][1]);
