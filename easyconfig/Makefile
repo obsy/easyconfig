@@ -34,6 +34,7 @@ define Package/easyconfig/conffiles
 /etc/easyconfig_leds.user
 /etc/easyconfig_watchdog.user
 /usr/lib/easyconfig/easyconfig_statistics.json.gz
+/www/easyconfig/dns.js
 endef
 
 define Build/Compile

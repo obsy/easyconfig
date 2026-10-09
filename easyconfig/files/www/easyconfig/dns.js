@@ -1,4 +1,4 @@
-var dns=[
+var dns = [
 {"id": 10, "ip": ["94.140.14.14", "94.140.15.15"], "name": "AdGuard DNS Default", "url": "https://adguard-dns.io/en/welcome.html"},
 {"id": 11, "ip": ["94.140.14.15", "94.140.15.16"], "name": "AdGuard DNS Family protection", "url": "https://adguard-dns.io/en/welcome.html"},
 {"id": 12, "ip": ["94.140.14.140", "94.140.14.141"], "name": "AdGuard DNS Non-filtering servers", "url": "https://adguard-dns.io/en/welcome.html"},
