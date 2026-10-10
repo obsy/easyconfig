@@ -13,11 +13,12 @@
 		<script src="/easyconfig/respond.min.js?v=1"></script>
 	<![endif]-->
 	<link href="/easyconfig/easyconfig.css?v=1" rel="stylesheet">
-	<script src="/easyconfig/easyconfig.js?v=1"></script>
-	<script src="/easyconfig/manuf.js?v=1"></script>
+	<script src="/easyconfig/clientdeftypeof.js?v=1"></script>
 	<script src="/easyconfig/dns.js?v=1"></script>
 	<script src="/easyconfig/feather.min.js?v=1"></script>
+	<script src="/easyconfig/manuf.js?v=1"></script>
 	<script src="/easyconfig/uqr.js?v=1"></script>
+	<script src="/easyconfig/easyconfig.js?v=1"></script>
 </head>
 <body>
 
@@ -1843,7 +1844,17 @@
 			<input id="hostname_name" type="text" class="form-control space">
 			</div>
 		</div>
+
+		<div class="form-group">
+			<label for="hostname_typeof" class="hidden-xs col-sm-3 control-label">Typ klienta</label>
+			<label for="hostname_typeof" class="visible-xs col-xs-12 control-label text-left">Typ klienta</label>
+			<div class="col-xs-12 col-sm-9">
+			<select id="hostname_typeof" class="form-control">
+			</select>
+			</div>
+		</div>
 		</form>
+
 		<input id="hostname_mac" type="hidden">
 
 		<h3 class="section"></h3>

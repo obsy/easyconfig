@@ -941,6 +941,8 @@ client_data() {
 
 	T=$(uci -q get easyconfig.m${NMAC}.name)
 	[ -n "$T" ] && USERNAME=',"username":"'"$(escapeJSON "$T")"'"' || USERNAME=',"username":""'
+	T=$(uci -q get easyconfig.m${NMAC}.typeof)
+	[ -n "$T" ] && TYPEOF=',"typeof":"'"$(escapeJSON "$T")"'"' || TYPEOF=',"typeof":""'
 
 	BLOCK=',"block":0,"blockdata":""'
 	T=$(uci -q get firewall.m${NMAC})
@@ -954,7 +956,7 @@ client_data() {
 
 	STATICDHCP=',"staticdhcp":"'$(uci -q get dhcp.m${NMAC}.ip)'"'
 
-	echo "${USERNAME}${BLOCK}${QOS}${STATICDHCP}"
+	echo "${USERNAME}${TYPEOF}${BLOCK}${QOS}${STATICDHCP}"
 }
 
 show_clients() {

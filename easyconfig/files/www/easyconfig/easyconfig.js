@@ -4256,7 +4256,11 @@ function clientscallback(sortby) {
 		}
 		html += '</div></div>';
 
-		var clients_type = {};
+		var clients_conntype = {};
+		var clients_typeof = {};
+		if (!clientdeftypeof.hasOwnProperty('')) {
+			clientdeftypeof[''] = 'nieokreślony';
+		}
 		var clients_capa = {};
 		var clients_transfer_total = 0;
 		var clients_connected_total = 0;
@@ -4278,17 +4282,17 @@ function clientscallback(sortby) {
 					clients[idx].rx = 0;
 				}
 				if (clients[idx].type == 1) {
-					clients_type['wire'] = (clients_type['wire'] ?? 0) + 1;
+					clients_conntype['wire'] = (clients_conntype['wire'] ?? 0) + 1;
 				}
 				if (clients[idx].type == 2) {
 					if (clients[idx].band == '2') {
-						clients_type['wireless2'] = (clients_type['wireless2'] ?? 0) + 1;
+						clients_conntype['wireless2'] = (clients_conntype['wireless2'] ?? 0) + 1;
 					}
 					if (clients[idx].band == '5') {
-						clients_type['wireless5'] = (clients_type['wireless5'] ?? 0) + 1;
+						clients_conntype['wireless5'] = (clients_conntype['wireless5'] ?? 0) + 1;
 					}
 					if (clients[idx].band == '6') {
-						clients_type['wireless6'] = (clients_type['wireless6'] ?? 0) + 1;
+						clients_conntype['wireless6'] = (clients_conntype['wireless6'] ?? 0) + 1;
 					}
 					var capa = 0;
 					if (clients[idx].capa >= 4 && clients[idx].capa <= 7) {
@@ -4305,6 +4309,7 @@ function clientscallback(sortby) {
 					var key = '(' + lower.toString() + ' dBm, ' + upper.toString() + ' dBm)';
 					clients_signal[key] = (clients_signal[key] || 0) + 1;
 				}
+				clients_typeof[clients[idx].typeof] = (clients_typeof[clients[idx].typeof] ?? 0) + 1;
 				clients_transfer_total += clients[idx].tx + clients[idx].rx;
 			}
 		}
@@ -4315,9 +4320,10 @@ function clientscallback(sortby) {
 			var n = 0;
 			if (clients_transfer_total > 0) { n++; }
 			if (clients_connected_total > 0) { n++; }
-			if (counter_active > 0) { n++; }
 			if (Object.keys(clients_capa).length > 0) { n++; }
 			if (Object.keys(clients_signal).length > 0) { n++; }
+			if (counter_active > 0) { n++; }
+			if (Object.keys(clients_typeof).length > 0) { n++; }
 
 			var idx = 0;
 			var colclass = 'col-sm-6';
@@ -4325,35 +4331,42 @@ function clientscallback(sortby) {
 				idx ++;
 				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
 				html += '<div class="col-xs-12 ' + colclass + '">';
-				html += '<div id="div_clients_stats_transfer"><canvas id="clients_stats_transfer" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg udziału w ruchu dla klientów bezprzewodowych</small></em></div></div>';
+				html += '<div id="div_clients_stats_transfer"><canvas id="clients_stats_transfer" height="400"></canvas><div class="text-center text-muted"><em><small>udział w ruchu klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
 			if (clients_connected_total > 0) {
 				idx ++;
 				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
 				html += '<div class="col-xs-12 ' + colclass + '">';
-				html += '<div id="div_clients_stats_connected"><canvas id="clients_stats_connected" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg czasu połączenia dla klientów bezprzewodowych</small></em></div></div>';
-				html += '</div>';
-			}
-			if (counter_active > 0) {
-				idx ++;
-				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
-				html += '<div class="col-xs-12 ' + colclass + '">';
-				html += '<div id="div_clients_stats_type"><canvas id="clients_stats_type" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg typu połączenia</small></em></div></div>';
+				html += '<div id="div_clients_stats_connected"><canvas id="clients_stats_connected" height="400"></canvas><div class="text-center text-muted"><em><small>czas połączenia klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
 			if (Object.keys(clients_capa).length > 0) {
 				idx ++;
 				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
 				html += '<div class="col-xs-12 ' + colclass + '">';
-				html += '<div id="div_clients_stats_capa"><canvas id="clients_stats_capa" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg standardu połączenia dla klientów bezprzewodowych</small></em></div></div>';
+				html += '<div id="div_clients_stats_capa"><canvas id="clients_stats_capa" height="400"></canvas><div class="text-center text-muted"><em><small>standard połączenia klientów bezprzewodowych</small></em></div></div>';
 				html += '</div>';
 			}
 			if (Object.keys(clients_signal).length > 0) {
 				idx ++;
 				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
 				html += '<div class="col-xs-12 ' + colclass + '">';
-				html += '<div id="div_clients_stats_signal"><canvas id="clients_stats_signal" height="400"></canvas><div class="text-center text-muted"><em><small>podział wg sygnału dla klientów bezprzewodowych</small></em></div></div>';
+				html += '<div id="div_clients_stats_signal"><canvas id="clients_stats_signal" height="400"></canvas><div class="text-center text-muted"><em><small>sygnał klientów bezprzewodowych</small></em></div></div>';
+				html += '</div>';
+			}
+			if (counter_active > 0) {
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_conntype"><canvas id="clients_stats_conntype" height="400"></canvas><div class="text-center text-muted"><em><small>typ połączenia</small></em></div></div>';
+				html += '</div>';
+			}
+			if (Object.keys(clients_typeof).length > 0) {
+				idx ++;
+				if (idx == n && n % 2 !== 0) { colclass = 'col-sm-12'; }
+				html += '<div class="col-xs-12 ' + colclass + '">';
+				html += '<div id="div_clients_stats_typeof"><canvas id="clients_stats_typeof" height="400"></canvas><div class="text-center text-muted"><em><small>typ klienta</small></em></div></div>';
 				html += '</div>';
 			}
 			html += '<div id="div_clients_pie_tooltip" class="tooltip"></div>';
@@ -4640,16 +4653,6 @@ function clientscallback(sortby) {
 					}));
 			}
 
-			if (counter_active > 0) {
-				drawPie('clients_stats_type', 'div_clients_stats_type',
-					objToSlices(clients_type, {
-						wire: 'Przewodowo',
-						wireless2: 'Bezprzewodowo ' + hrband(2),
-						wireless5: 'Bezprzewodowo ' + hrband(5),
-						wireless6: 'Bezprzewodowo ' + hrband(6)
-					}));
-			}
-
 			if (Object.keys(clients_capa).length) {
 				drawPie('clients_stats_capa', 'div_clients_stats_capa',
 					objToSlices(clients_capa, {
@@ -4664,6 +4667,20 @@ function clientscallback(sortby) {
 
 			if (Object.keys(clients_signal).length) {
 				drawPie('clients_stats_signal', 'div_clients_stats_signal', objToSlices(clients_signal));
+			}
+
+			if (counter_active > 0) {
+				drawPie('clients_stats_conntype', 'div_clients_stats_conntype',
+					objToSlices(clients_conntype, {
+						wire: 'Przewodowo',
+						wireless2: 'Bezprzewodowo ' + hrband(2),
+						wireless5: 'Bezprzewodowo ' + hrband(5),
+						wireless6: 'Bezprzewodowo ' + hrband(6)
+					}));
+			}
+
+			if (Object.keys(clients_typeof).length) {
+				drawPie('clients_stats_typeof', 'div_clients_stats_typeof', objToSlices(clients_typeof, clientdeftypeof));
 			}
 		}
 	}
@@ -4910,6 +4927,7 @@ function hostinfo(id) {
 	html += createRowForModal('MAC', host.mac);
 	html += createRowForModal('Producent', getmanuf(host.mac));
 	html += createRowForModal('Nazwa rzeczywista', (host.dhcpname == '' ? '-' : host.dhcpname));
+	html += createRowForModal('Typ klienta', clientdeftypeof[host.typeof] || host.typeof);
 	html += createRowForModal('Typ połączenia', host.type == 1 ? 'przewodowo' : 'bezprzewodowo');
 	if (host.active) {
 		if (host.type == 1) {
@@ -5135,11 +5153,25 @@ function hostblock_uncheckall() {
 }
 
 function hostnameedit(id) {
+	var e = removeOptions('hostname_typeof');
+
+	Object.keys(clientdeftypeof)
+	.sort(function (a, b) {
+		return clientdeftypeof[a].localeCompare(clientdeftypeof[b], 'pl');
+	})
+	.forEach(function (key) {
+		var opt = document.createElement('option');
+		opt.value = key;
+		opt.textContent = clientdeftypeof[key];
+		e.appendChild(opt);
+	});
+
 	var host = clients.find(obj => obj.id == id);
 
 	setValue('hostname_mac', host.mac);
 	setValue('hostname_name', host.displayname);
 	setValue('hostname_name1', escapeHTML(host.displayname));
+	setValue('hostname_typeof', host.typeof);
 	setDisplay('div_hostname', true);
 	document.getElementById('hostname_name').focus();
 }
@@ -5159,6 +5191,7 @@ function savehostname() {
 	cmd.push('uci -q del easyconfig.m' + nmac);
 	cmd.push('uci set easyconfig.m' + nmac + '=mac');
 	cmd.push('uci set easyconfig.m' + nmac + '.name="' + escapeShell(name) + '"');
+	cmd.push('uci set easyconfig.m' + nmac + '.typeof="' + getValue('hostname_typeof') + '"');
 	cmd.push('uci commit easyconfig');
 
 	execute(cmd, showclients);
