@@ -34,8 +34,9 @@ define Package/easyconfig/conffiles
 /etc/easyconfig_leds.user
 /etc/easyconfig_watchdog.user
 /usr/lib/easyconfig/easyconfig_statistics.json.gz
-/www/easyconfig/clientdeftypeof.js
-/www/easyconfig/dns.js
+/www/easyconfig/def_clienttypeof.json
+/www/easyconfig/def_dns.json
+/www/easyconfig/manuf.js
 endef
 
 define Build/Compile
@@ -71,7 +72,7 @@ define Package/easyconfig/install
 
 	$(SED) 's/^\t*//g;s/^\s*//g;/^$$$$/d' $(1)/www/easyconfig.html
 
-	for src in $(1)/www/easyconfig/clientdeftypeof.js $(1)/www/easyconfig/dns.js $(1)/www/easyconfig/easyconfig.js; do \
+	for src in $(1)/www/easyconfig/easyconfig.js; do \
 		uglifyjs "$$$$src" -o "$$$$src".1 && \
 		mv "$$$$src".1 "$$$$src" || true; \
 	done

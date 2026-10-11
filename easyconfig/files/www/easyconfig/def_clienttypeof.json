@@ -1,0 +1,20 @@
+{
+  "appliance": "AGD",
+  "audio": "Sprzęt audio",
+  "camera": "Kamera / monitoring",
+  "console": "Konsola do gier",
+  "iot": "Smart home / IoT",
+  "laptop": "Laptop",
+  "media": "Odtwarzacz multimedialny",
+  "network": "Urządzenie sieciowe",
+  "computer": "Komputer",
+  "phone": "Telefon stacjonarny / VoIP",
+  "printer": "Drukarka",
+  "router": "Router",
+  "server": "Serwer / NAS",
+  "smartphone": "Smartfon",
+  "smartwatch": "Smartwatch",
+  "tablet": "Tablet",
+  "tv": "Telewizor",
+  "wearable": "Opaska / czujnik noszony"
+}

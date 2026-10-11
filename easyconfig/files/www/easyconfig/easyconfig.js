@@ -51,38 +51,114 @@ function showicon() {
 	feather.replace({'width':18, 'height':18});
 }
 
-function easyconfig_onload() {
+var defClientTypeOf = {};
+async function loadDefClientTypeOf() {
+	var file = 'def_clienttypeof.json';
+	var r = await fetch('/easyconfig/' + file, { cache: 'no-cache' });
+	if (!r.ok) {
+		throw new Error(file + ': HTTP ' + r.status);
+	}
+
+	var text = await r.text();
+	var raw = JSON.parse(text.replace(/^\uFEFF/, '').replace(/^\s*\/\/.*$/gm, ''));
+	var key;
+
+	if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+		throw new Error(file + ': plik musi zawierać obiekt {"klucz": "opis"}');
+	}
+	if (Object.keys(raw).length === 0) {
+		throw new Error(file + ': plik jest pusty');
+	}
+	for (key in raw) {
+		if (typeof raw[key] !== 'string' || raw[key].trim() === '') {
+			throw new Error(file + ': wartość dla "' + key + '" musi być niepustym tekstem');
+		}
+	}
+	return raw;
+}
+
+var defDns = [];
+async function loadDefDns() {
+	var file = 'def_dns.json';
+	var r = await fetch('/easyconfig/' + file, { cache: 'no-cache' });
+	if (!r.ok) {
+		throw new Error(file + ': HTTP ' + r.status);
+	}
+
+	var text = await r.text();
+	var raw = JSON.parse(text.replace(/^\uFEFF/, '').replace(/^\s*\/\/.*$/gm, ''));
+	var ids = {};
+	var i, j, e, label;
+
+	if (!Array.isArray(raw)) {
+		throw new Error(file + ': plik musi zawierać tablicę [ {...}, {...} ]');
+	}
+	if (raw.length === 0) {
+		throw new Error(file + ': plik jest pusty');
+	}
+
+	for (i = 0; i < raw.length; i++) {
+		e = raw[i];
+		label = 'wpis #' + (i + 1);
+
+		if (e === null || typeof e !== 'object' || Array.isArray(e)) {
+			throw new Error(file + ': ' + label + ': musi być obiektem');
+		}
+		if (typeof e.id !== 'number' || !isFinite(e.id)) {
+			throw new Error(file + ': ' + label + ': "id" musi być liczbą');
+		}
+		label = 'wpis id=' + e.id;
+		if (ids[e.id]) {
+			throw new Error(file + ': ' + label + ': zduplikowane "id"');
+		}
+		ids[e.id] = true;
+
+		if (typeof e.name !== 'string' || e.name.trim() === '') {
+			throw new Error(file + ': ' + label + ': "name" musi być niepustym tekstem');
+		}
+		if (!Array.isArray(e.ip) || e.ip.length === 0) {
+			throw new Error(file + ': ' + label + ': "ip" musi być niepustą tablicą');
+		}
+		for (j = 0; j < e.ip.length; j++) {
+			if (typeof e.ip[j] !== 'string' || e.ip[j].trim() === '') {
+				throw new Error(file + ': ' + label + ': "ip[' + j + ']" musi być niepustym tekstem');
+			}
+		}
+		if (typeof e.url !== 'string' || e.url.trim() === '') {
+			throw new Error(file + ': ' + label + ': "url" musi być niepustym tekstem');
+		}
+	}
+	return raw;
+}
+
+async function easyconfig_onload() {
 	showicon();
 	setTheme(getCookie('easyconfig_darkmode'));
 
 	var inittoken = '00000000000000000000000000000000';
 
 	var value;
-	var key;
+	var text;
 	var e1 = removeOptions('wan_netmask');
 	var e2 = removeOptions('network_netmask');
 	var e3 = removeOptions('vpn_wireguard_netmask_idx');
 	var e4 = removeOptions('vpn_wireguard_allowed_netmask_idx_idy');
 	for (var idx = 0; idx <= 32; idx++) {
 		value = cidrToMask(idx);
-		key = '/' + idx + ' (' + value + ')';
-		var opt = document.createElement('option');
-		opt.value = value;
-		opt.innerHTML = key;
-		e1.appendChild(opt);
-		opt = document.createElement('option');
-		opt.value = value;
-		opt.innerHTML = key;
-		e2.appendChild(opt);
-		opt = document.createElement('option');
-		opt.value = value;
-		opt.innerHTML = key;
-		e3.appendChild(opt);
-		opt = document.createElement('option');
-		opt.value = value;
-		opt.innerHTML = key;
-		e4.appendChild(opt);
+		text = '/' + idx + ' (' + value + ')';
+		addOption(e1, value, text);
+		addOption(e2, value, text);
+		addOption(e3, value, text);
+		addOption(e4, value, text);
 	}
+
+	try {
+		defClientTypeOf = await loadDefClientTypeOf();
+		defDns = await loadDefDns();
+	} catch (err) {
+		console.error('Błąd wczytywania konfiguracji: ' + err.message);
+	}
+	defClientTypeOf[''] = 'nieokreślony';
 
 	token = getCookie('easyconfig_token');
 	if (token.length == 32) {
@@ -200,6 +276,23 @@ function escapeHTML(str) {
 	return String(str).replace(/[&<>"']/g, function(tag) {
 		return tagsToReplace[tag];
 	});
+}
+
+function addOption(element, value, text, attrs) {
+	var opt = document.createElement('option');
+	opt.value = value;
+	opt.textContent = text;
+	if (attrs) {
+		for (var key in attrs) {
+			if (!Object.prototype.hasOwnProperty.call(attrs, key)) { continue };
+			if (key === 'disabled') {
+				opt[key] = !!attrs[key];
+			} else {
+				opt.setAttribute(key, attrs[key]);
+			}
+		}
+	}
+	element.appendChild(opt);
 }
 
 /*****************************************************************************/
@@ -781,10 +874,7 @@ function enableWan(proto) {
 			t = {"":"Wg ustawień modemu", "all":"Wybór automatyczny 5G/4G/3G/2G", "lte":"Tylko 4G (LTE-A/LTE)", "umts":"Tylko 3G (HSPA/UMTS)", "gsm":"Tylko 2G (EDGE/GSM)"};
 		}
 		for (key in t) {
-			var opt = document.createElement('option');
-			opt.value = key;
-			opt.innerHTML = t[key];
-			e.appendChild(opt);
+			addOption(e, key, t[key]);
 		}
 	}
 	if (proto != 'dhcp' && proto != 'static' && proto != 'unknown' && config.wan_ifname_default !== '' && config.wan_ifname_default != 'br-wan') {
@@ -817,8 +907,8 @@ function enableWan(proto) {
 			setValue('wan_dns', 'isp');
 		} else {
 			setValue('wan_dns', 'custom');
-			for (var idx = 0; idx < dns.length; idx++) {
-				var ip = (dns[idx].ip).sort();
+			for (var idx = 0; idx < defDns.length; idx++) {
+				var ip = (defDns[idx].ip).sort();
 				if (ip == t) {
 					setValue('wan_dns', t);
 					break;
@@ -1238,10 +1328,7 @@ function setEncryption(element, is6, encryption) {
 
 	var select = removeOptions(element);
 	for (var propt in enc) {
-		var opt = document.createElement('option');
-		opt.value = propt;
-		opt.innerHTML = enc[propt];
-		select.appendChild(opt);
+		addOption(select, propt, enc[propt]);
 	}
 	setValue(element, encryption);
 }
@@ -1258,71 +1345,45 @@ function showconfig() {
 		arr.push('-');
 		arr.push('detect');
 		for (var idx = 0; idx < arr.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = arr[idx];
-			opt.innerHTML = wan[arr[idx]];
-			if (arr[idx] == '-') { opt.disabled = true; }
-			e.appendChild(opt);
+			addOption(e, arr[idx], wan[arr[idx]], arr[idx] == '-' ? { disabled: true } : null);
 		}
 		if (!(config.wan_proto in wan)) {
-			var opt = document.createElement('option');
-			opt.value = 'unknown';
-			opt.innerHTML = 'Nieobsługiwany';
-			e.appendChild(opt);
+			addOption(e, 'unknown', 'Nieobsługiwany');
 		}
 
 		e = removeOptions('wan_device');
 		var arr = config.wan_devices;
 		for (var idx = 0; idx<arr.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = arr[idx];
-			opt.innerHTML = arr[idx];
-			e.appendChild(opt);
+			addOption(e, arr[idx], arr[idx]);
 		}
 
 		e = removeOptions('modemsettings_modem_device');
-		var opt = document.createElement('option');
-		opt.value = '';
-		opt.innerHTML = 'Automatyczne wykrywanie';
-		e.appendChild(opt);
+		addOption(e, '', 'Automatyczne wykrywanie');
 		for (var idx = 0; idx < arr.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = arr[idx];
-			opt.innerHTML = arr[idx];
-			e.appendChild(opt);
+			addOption(e, arr[idx], arr[idx]);
 		}
 
 		e = removeOptions('wan_device_rndis');
 		var arr = config.wan_ifnames_rndis;
 		for (var idx = 0; idx < arr.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = arr[idx];
-			opt.innerHTML = arr[idx];
-			e.appendChild(opt);
+			addOption(e, arr[idx], arr[idx]);
 		}
 
 		e = removeOptions('wan_device_mm');
 		var arr = config.wan_devices_mm;
 		for (var idx = 0; idx < arr.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = arr[idx][0];
-			opt.innerHTML = arr[idx][1] + ' ' + arr[idx][2];
-			e.appendChild(opt);
+			addOption(e, arr[idx][0], arr[idx][1] + ' ' + arr[idx][2]);
 		}
 
 		e = removeOptions('wan_dns');
 		var sorteddns = [];
-		sorteddns = sortJSON(dns, 'id', 'asc');
+		sorteddns = sortJSON(defDns, 'id', 'asc');
 		sorteddns = [{"id":1,"ip":["isp"],"name":"Otrzymane od dostawcy","url":""},{"id":2,"ip":["custom"],"name":"Inne","url":""}].concat(sorteddns);
 		if (config.services.stubby) {
 			sorteddns = [{"id":3,"ip":["stubby"],"name":"DNS over TLS","url":""}].concat(sorteddns);
 		}
 		for (var idx = 0; idx < sorteddns.length; idx++) {
-			var opt = document.createElement('option');
-			opt.value = (sorteddns[idx].ip).sort();
-			opt.innerHTML = sorteddns[idx].name;
-			opt.setAttribute('data-url', sorteddns[idx].url);
-			e.appendChild(opt);
+			addOption(e, (sorteddns[idx].ip).sort(), sorteddns[idx].name, { 'data-url': sorteddns[idx].url });
 		}
 
 		setValue('wan_ipaddr', config.wan_ipaddr);
@@ -1386,15 +1447,9 @@ function showconfig() {
 
 			var select = removeOptions('wlan_channel_' + i);
 			var obj = config[radios[i]].wlan_channels;
-			var opt = document.createElement('option');
-			opt.value = '0';
-			opt.innerHTML = 'automatycznie';
-			select.appendChild(opt);
+			addOption(select, '0', 'automatycznie');
 			for (var propt in obj) {
-				var opt = document.createElement('option');
-				opt.value = propt;
-				opt.innerHTML = propt + ' (' + obj[propt][1] + ' dBm)' + (obj[propt][2] ? ' DFS' : '');
-				select.appendChild(opt);
+				addOption(select, propt, propt + ' (' + obj[propt][1] + ' dBm)' + (obj[propt][2] ? ' DFS' : ''));
 				switch (freq2band(obj[propt][0])) {
 					case 2:
 						is_radio2 = true;
@@ -1530,46 +1585,22 @@ function showconfig() {
 		// button
 		if (config.button.code != '') {
 			select = removeOptions('system_button');
-			var opt = document.createElement('option');
-			opt.value = 'none';
-			opt.innerHTML = 'Brak akcji';
-			select.appendChild(opt);
-			opt = document.createElement('option');
-			opt.value = 'leds';
-			opt.innerHTML = 'Włącz/wyłącz diody LED';
-			select.appendChild(opt);
+			addOption(select, 'none', 'Brak akcji');
+			addOption(select, 'leds', 'Włącz/wyłącz diody LED');
 			if (is_radio2 || is_radio5 || is_radio6) {
-				opt = document.createElement('option');
-				opt.value = 'rfkill';
-				opt.innerHTML = 'Włącz/wyłącz Wi-Fi';
-				select.appendChild(opt);
-				opt = document.createElement('option');
-				opt.value = 'wifitoggle';
-				opt.innerHTML = 'Włącz/wyłącz Wi-Fi sieci dodatkowych';
+				addOption(select, 'rfkill', 'Włącz/wyłącz Wi-Fi');
+				addOption(select, 'wifitoggle', 'Włącz/wyłącz Wi-Fi sieci dodatkowych');
 				if (config.services.wpsscript) {
-					select.appendChild(opt);
-					opt = document.createElement('option');
-					opt.value = 'wps';
-					opt.innerHTML = 'Uruchom WPS (Wi-Fi Protected Setup)';
-					select.appendChild(opt);
+					addOption(select, 'wps', 'Uruchom WPS (Wi-Fi Protected Setup)');
 				}
 			}
 			if (config.services.wol) {
-				opt = document.createElement('option');
-				opt.value = 'wol';
-				opt.innerHTML = 'Wybudzenie przez Wake on LAN';
-				select.appendChild(opt);
+				addOption(select, 'wol', 'Wybudzenie przez Wake on LAN');
 			}
 			if ((config.services.vpn).length > 0) {
-				opt = document.createElement('option');
-				opt.value = 'vpn';
-				opt.innerHTML = 'Włącz/wyłącz VPN';
-				select.appendChild(opt);
+				addOption(select, 'vpn', 'Włącz/wyłącz VPN');
 			}
-			opt = document.createElement('option');
-			opt.value = 'killswitch';
-			opt.innerHTML = 'Włącz/wyłącz dostęp z sieci lokalnej (killswitch)';
-			select.appendChild(opt);
+			addOption(select, 'killswitch', 'Włącz/wyłącz dostęp z sieci lokalnej (killswitch)');
 			setValue('system_button_name', config.button.name);
 			setValue('system_button', config.button.action);
 		}
@@ -2528,10 +2559,7 @@ function showmodeminfo() {
 			var e = removeOptions('modem_simslot');
 			var arr = sortJSON(data.simslot.slots, 'index', 'asc');
 			for (var idx = 0; idx < arr.length; idx++) {
-				var opt = document.createElement('option');
-				opt.value = arr[idx]["value"];
-				opt.innerHTML = arr[idx]["description"];
-				e.appendChild(opt);
+				addOption(e, arr[idx]['value'], arr[idx]['description']);
 			}
 			setValue('modem_simslot', data.simslot.active);
 			setDisplay('div_modem_simslot', true);
@@ -4258,9 +4286,6 @@ function clientscallback(sortby) {
 
 		var clients_conntype = {};
 		var clients_typeof = {};
-		if (!clientdeftypeof.hasOwnProperty('')) {
-			clientdeftypeof[''] = 'nieokreślony';
-		}
 		var clients_capa = {};
 		var clients_transfer_total = 0;
 		var clients_connected_total = 0;
@@ -4583,7 +4608,7 @@ function clientscallback(sortby) {
 					var d2 = dx * dx + dy * dy;
 					var slice = null;
 
-					if (d2 <= radius * radius && d2 >= inner * inner) {   // tylko w obrębie pierścienia
+					if (d2 <= radius * radius && d2 >= inner * inner) { // tylko w obrębie pierścienia
 						var a = Math.atan2(dy, dx);
 						if (a < -Math.PI / 2) { a += 2 * Math.PI; }
 						for (var j = 0; j < slices.length; j++) {
@@ -4680,7 +4705,7 @@ function clientscallback(sortby) {
 			}
 
 			if (Object.keys(clients_typeof).length) {
-				drawPie('clients_stats_typeof', 'div_clients_stats_typeof', objToSlices(clients_typeof, clientdeftypeof));
+				drawPie('clients_stats_typeof', 'div_clients_stats_typeof', objToSlices(clients_typeof, defClientTypeOf));
 			}
 		}
 	}
@@ -4840,7 +4865,7 @@ function hostmenu(id) {
 
 	var html = escapeHTML(host.displayname) + '<hr>';
 	html += '<p><span class="click" onclick="closeMsg();hostinfo(' + (host.active_id > -1 ? host.active_id : host.id) + ');">informacje</span></p>';
-	html += '<p><span class="click" onclick="closeMsg();hostnameedit(' + host.id + ');">zmiana nazwy</span></p>';
+	html += '<p><span class="click" onclick="closeMsg();hostnameedit(' + host.id + ');">zmiana nazwy/typu</span></p>';
 	if (host.active && host.ip && config.services.pingraw) {
 		html += '<p><span class="click" onclick="closeMsg();hostping(' + host.id + ');">ping</span></p>';
 	}
@@ -4927,7 +4952,7 @@ function hostinfo(id) {
 	html += createRowForModal('MAC', host.mac);
 	html += createRowForModal('Producent', getmanuf(host.mac));
 	html += createRowForModal('Nazwa rzeczywista', (host.dhcpname == '' ? '-' : host.dhcpname));
-	html += createRowForModal('Typ klienta', clientdeftypeof[host.typeof] || host.typeof);
+	html += createRowForModal('Typ klienta', defClientTypeOf[host.typeof] || host.typeof);
 	html += createRowForModal('Typ połączenia', host.type == 1 ? 'przewodowo' : 'bezprzewodowo');
 	if (host.active) {
 		if (host.type == 1) {
@@ -5155,16 +5180,17 @@ function hostblock_uncheckall() {
 function hostnameedit(id) {
 	var e = removeOptions('hostname_typeof');
 
-	Object.keys(clientdeftypeof)
-	.sort(function (a, b) {
-		return clientdeftypeof[a].localeCompare(clientdeftypeof[b], 'pl');
-	})
-	.forEach(function (key) {
-		var opt = document.createElement('option');
-		opt.value = key;
-		opt.textContent = clientdeftypeof[key];
-		e.appendChild(opt);
-	});
+	addOption(e, '', 'nieokreślony');
+	Object.keys(defClientTypeOf)
+		.filter(function (key) {
+			return key !== '';
+		})
+		.sort(function (a, b) {
+			return defClientTypeOf[a].localeCompare(defClientTypeOf[b], undefined);
+		})
+		.forEach(function (key) {
+			addOption(e, key, defClientTypeOf[key]);
+		});
 
 	var host = clients.find(obj => obj.id == id);
 
@@ -6190,16 +6216,10 @@ function readussdshortcuts() {
 		if (arr.length > 0) {
 			setElementEnabled('ussd_shortcuts', true, false);
 			var select = removeOptions('ussd_shortcuts');
-			var opt = document.createElement('option');
-			opt.value = 'own';
-			opt.innerHTML = 'wybierz kod USSD';
-			select.appendChild(opt);
+			addOption(select, 'own', 'wybierz kod USSD');
 			for (var propt in arr) {
 				for (var propt1 in arr[propt]) {
-					var opt = document.createElement('option');
-					opt.value = propt1;
-					opt.innerHTML = arr[propt][propt1];
-					select.appendChild(opt);
+					addOption(select, propt1, arr[propt][propt1]);
 				}
 			}
 		} else {
@@ -6607,10 +6627,7 @@ function addvpn() {
 	var e = removeOptions('vpn_new');
 	var arr = (config.services.vpn).sort();
 	for (var idx = 0; idx < arr.length; idx++) {
-		var opt = document.createElement('option');
-		opt.value = arr[idx];
-		opt.innerHTML = vpntype(arr[idx]);
-		e.appendChild(opt);
+		addOption(e, arr[idx], vpntype(arr[idx]));
 	}
 
 	setValue('upload_status', '-');
