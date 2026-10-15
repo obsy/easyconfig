@@ -1284,8 +1284,10 @@ function showChannelRange(current_channels) {
 					break;
 				}
 			}
-			if (t != '') { t += ', '; }
-			t += o.channel + ' (' + o.min + ' - ' + o.max + ')';
+			if (t != '') { t += '<br>'; }
+			t += o.channel + ' (' + o.min + ' - ' + o.max;
+			if (o.width) { t += ', ' + o.width + ' MHz'; }
+			t += ')';
 		}
 		setValue('wlan_current_channels', t == '' ? '-' : t);
 	}

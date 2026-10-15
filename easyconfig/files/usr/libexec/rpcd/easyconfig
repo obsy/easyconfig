@@ -107,7 +107,7 @@ wlancurrentchannels() {
 						if ($i=="center1:") c=$(i+1)+0
 					}
 					if (c>=5955) {b=5955; o=1} else if (c>=5160) {b=5160; o=32} else {b=2412; o=1}
-					printf "{\"phy\":\"%s\",\"interface\":\"%s\",\"channel\":%d,\"min\":%d,\"max\":%d, \"freq\":%d},\n", PHY, INTERFACE, $2, (c-w/2-b)/5+o, (c+w/2-b)/5+o, c
+					printf "{\"phy\":\"%s\",\"interface\":\"%s\",\"channel\":%d,\"min\":%d,\"max\":%d,\"freq\":%d,\"width\":%d},\n", PHY, INTERFACE, $2, (c-w/2-b)/5+o, (c+w/2-b)/5+o, c, w
 					}'
 			fi
 		done
