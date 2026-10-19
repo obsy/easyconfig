@@ -543,3 +543,52 @@ h3 {
 .labelright {
   text-align:right !important;
 }
+
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 30px 24px 30px;
+}
+
+.topo-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90px;
+  flex: none;
+}
+
+.topo-node svg {
+  width: 44px;
+  height: 44px;
+  fill: none;
+  stroke: #9aa4b2;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topo-label {
+  margin-top: 14px;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.topo-link {
+  flex: 1;
+  height: 4px;
+  margin: 20px 10px 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #2a3a55);
+}
+
+.topo-link.down {
+  background: linear-gradient(90deg, #ef4444, #3a2a2f);
+}
+
+.topo-node.down svg {
+  stroke: #ef4444;
+}

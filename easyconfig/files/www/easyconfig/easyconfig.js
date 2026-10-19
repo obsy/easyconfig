@@ -713,6 +713,12 @@ function removeClasses(element, classes) {
 	}
 }
 
+function toggleClass(element, cl, state) {
+	if (typeof element === 'string') element = document.getElementById(element);
+	if (!element) return;
+	element.classList.toggle(cl, !!state);
+}
+
 function showError(element, input, msg) {
 	setValue(element, msg);
 	setDisplay(element, msg != '');
@@ -2219,19 +2225,14 @@ function convertToSpeed(val, fixedpow) {
 
 function bandwidthcallback(val) {
 	bandwidth_unit = val;
-	document.getElementById('bandwidth_bits').classList.toggle('select-option-active', !val);
-	document.getElementById('bandwidth_bytes').classList.toggle('select-option-active', val);
+	toggleClass('bandwidth_bits', 'select-option-active', !val);
+	toggleClass('bandwidth_bytes', 'select-option-active', val);
 }
 
 function bandwidthcallbackavg() {
 	var e = document.getElementById('bandwidth_avg');
-	if (e.classList.contains('select-option-active')) {
-		bandwidth_avg = false;
-		e.classList.toggle('select-option-active', false);
-	} else {
-		bandwidth_avg = true;
-		e.classList.toggle('select-option-active', true);
-	}
+	bandwidth_avg = !e.classList.contains('select-option-active');
+	toggleClass(e, 'select-option-active', bandwidth_avg);
 }
 
 function showbandwidth(mac, section) {
@@ -2491,6 +2492,12 @@ function showstatus() {
 		} else {
 			setDisplay('div_status_mwan3', false);
 		}
+
+		setValue('topo-router', config.system_hostname);
+		var isOffline = (!data.wan_uptime || !data.wan_tx || !data.wan_rx);
+		toggleClass('topo-internet', 'down', isOffline);
+		toggleClass('l-1', 'down', isOffline);
+		setValue('topo-clients', 'połączonych: ' + (data.wlan_clients + data.lan_clients));
 	});
 }
 
@@ -3587,9 +3594,7 @@ function showsitesurvey_praser(data) {
 function sitesurveycallbackfilter(filterby) {
 	var all = ['all', '2', '5', '6'];
 	for (var idx = 0; idx < all.length; idx++) {
-		var e = document.getElementById('sitesurvey_filter_' + all[idx]);
-		if (e)
-			e.classList.toggle('select-option-active', filterby == all[idx]);
+		toggleClass('sitesurvey_filter_' + all[idx], 'select-option-active', filterby == all[idx]);
 	}
 	setCookie('easyconfig_sitesurvey_filterby', filterby);
 }
@@ -3855,9 +3860,7 @@ function sitesurveycallback(sortby) {
 
 		all = ['ssid', 'mac', 'signal', 'freq', 'timestamp'];
 		for (var idx = 0; idx < all.length; idx++) {
-			var e = document.getElementById('sitesurvey_sortby_' + all[idx]);
-			if (e)
-				e.classList.toggle('select-option-active', sortby == all[idx]);
+			toggleClass('sitesurvey_sortby_' + all[idx], 'select-option-active', sortby == all[idx]);
 		}
 
 		if (is_radio2 + is_radio5 + is_radio6 >= 2) {
@@ -4175,9 +4178,7 @@ function showclients() {
 function clientscallbackfilter(filterby) {
 	var all = ['active', 'all'];
 	for (var idx = 0; idx < all.length; idx++) {
-		var e = document.getElementById('clients_filter_' + all[idx]);
-		if (e)
-			e.classList.toggle('select-option-active', filterby == all[idx]);
+		toggleClass('clients_filter_' + all[idx], 'select-option-active', filterby == all[idx]);
 	}
 	setCookie('easyconfig_clients_filterby', filterby);
 }
@@ -4185,9 +4186,7 @@ function clientscallbackfilter(filterby) {
 function clientscallbackfilterall(filterbyall) {
 	var all = ['all', 'day', 'week', 'month', 'year'];
 	for (var idx = 0; idx < all.length; idx++) {
-		var e = document.getElementById('clients_filterall_' + all[idx]);
-		if (e)
-			e.classList.toggle('select-option-active', filterbyall == all[idx]);
+		toggleClass('clients_filterall_' + all[idx], 'select-option-active', filterbyall == all[idx]);
 	}
 	setCookie('easyconfig_clients_filterbyall', filterbyall);
 }
@@ -4195,9 +4194,7 @@ function clientscallbackfilterall(filterbyall) {
 function clientscallbackshowtype(showtype) {
 	var all = ['table', 'graph'];
 	for (var idx = 0; idx < all.length; idx++) {
-		var e = document.getElementById('clients_showtype_' + all[idx]);
-		if (e)
-			e.classList.toggle('select-option-active', showtype == all[idx]);
+		toggleClass('clients_showtype_' + all[idx], 'select-option-active', showtype == all[idx]);
 	}
 	setCookie('easyconfig_clients_showtype', showtype);
 }
@@ -4529,21 +4526,15 @@ function clientscallback(sortby) {
 	if (clients.length > 0) {
 		all = ['displayname', 'tx', 'rx', 'percent', 'connected', 'type', 'ip', 'mac', 'last_seen'];
 		for (var idx = 0; idx < all.length; idx++) {
-			var e = document.getElementById('clients_sortby_' + all[idx]);
-			if (e)
-				e.classList.toggle('select-option-active', sortby == all[idx]);
+			toggleClass('clients_sortby_' + all[idx], 'select-option-active', sortby == all[idx]);
 		}
 		all = ['all', 'day', 'week', 'month', 'year'];
 		for (var idx = 0; idx < all.length; idx++) {
-			var e = document.getElementById('clients_filterall_' + all[idx]);
-			if (e)
-				e.classList.toggle('select-option-active', filterbyall == all[idx]);
+			toggleClass('clients_filterall_' + all[idx], 'select-option-active', filterbyall == all[idx]);
 		}
 		all = ['table', 'graph'];
 		for (var idx = 0; idx < all.length; idx++) {
-			var e = document.getElementById('clients_showtype_' + all[idx]);
-			if (e)
-				e.classList.toggle('select-option-active', showtype == all[idx]);
+			toggleClass('clients_showtype_' + all[idx], 'select-option-active', showtype == all[idx]);
 		}
 		showicon();
 
@@ -5606,9 +5597,7 @@ function queriescallback(sortby, order) {
 	if (filtered.length > 0) {
 		var all = ['time', 'query', 'host'];
 		for (var idx = 0; idx < all.length; idx++) {
-			var e = document.getElementById('queries_sortby_' + all[idx]);
-			if (e)
-				e.classList.toggle('select-option-active', sortby == all[idx]);
+			toggleClass('queries_sortby_' + all[idx], 'select-option-active', sortby == all[idx]);
 		}
 		setValue('queries_hosts', btoa(selected));
 	}
