@@ -43,7 +43,6 @@ function setTheme(mode) {
 				document.body.classList.remove('darkmode');
 			}
 			setCookie('easyconfig_darkmode', '2');
-			break;
 	}
 }
 
@@ -879,7 +878,7 @@ function enableWan(proto) {
 		if (proto == 'qmi') {
 			t = {"":"Wg ustawień modemu", "all":"Wybór automatyczny 5G/4G/3G/2G", "lte":"Tylko 4G (LTE-A/LTE)", "umts":"Tylko 3G (HSPA/UMTS)", "gsm":"Tylko 2G (EDGE/GSM)"};
 		}
-		for (key in t) {
+		for (var key in t) {
 			addOption(e, key, t[key]);
 		}
 	}
@@ -2020,7 +2019,7 @@ function saveconfig() {
 			cmd.push('uci set wireless.' + section + '.disabled=1');
 		}
 
-		wlan_channel = getValue('wlan_channel_' + i);
+		var wlan_channel = getValue('wlan_channel_' + i);
 		if (config[radios[i]].wlan_channel != wlan_channel) {
 			wlan_restart_required = true;
 		}
@@ -2034,7 +2033,7 @@ function saveconfig() {
 			}
 		}
 		if (wlan_channel > 0) {
-			txpower = getValue('wlan_txpower_' + i);
+			var txpower = getValue('wlan_txpower_' + i);
 			var maxtxpower = config[radios[i]].wlan_channels[wlan_channel][1];
 			var curtxpower = Math.round(txpower * maxtxpower / 100);
 			if (config[radios[i]].wlan_txpower != curtxpower) {
@@ -2044,7 +2043,7 @@ function saveconfig() {
 		} else {
 			cmd.push('uci -q del wireless.' + radios[i] + '.txpower');
 		}
-		wlan_ssid = getValue('wlan_ssid_' + i);
+		var wlan_ssid = getValue('wlan_ssid_' + i);
 		if (wlan_ssid == '') {
 			showMsg('Błąd w polu ' + getLabelText('wlan_ssid_' + i) + ' dla ' + getValue('radio_' + i), true);
 			return;
@@ -2057,12 +2056,12 @@ function saveconfig() {
 			wlan_restart_required = true;
 		}
 		cmd.push('uci set wireless.' + section + '.ssid="' + escapeShell(wlan_ssid) + '"');
-		wlan_encryption = getValue('wlan_encryption_' + i);
+		var wlan_encryption = getValue('wlan_encryption_' + i);
 		if (config[radios[i]].wlan_encryption != wlan_encryption) {
 			wlan_restart_required = true;
 		}
 		cmd.push('uci set wireless.' + section + '.encryption="' + wlan_encryption + '"');
-		wlan_key = getValue('wlan_key_' + i);
+		var wlan_key = getValue('wlan_key_' + i);
 		if (wlan_encryption != 'none') {
 			if (wlan_key.length < 8) {
 				showMsg('Błąd w polu ' + getLabelText('wlan_key_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Hasło do Wi-Fi musi mieć co najmniej 8 znaków', true);
@@ -2434,7 +2433,6 @@ function showstatus() {
 					break;
 				default:
 					setValue('mwan3_policy', data.mwan3_use_policy);
-					break;
 			}
 
 			ubus_call('mwan3', 'status', {}, function(data1) {
@@ -2505,28 +2503,20 @@ function networkspeed(speed) {
 	switch (speed) {
 		case 40000:
 			return '40Gbps';
-			break;
 		case 25000:
 			return '25Gbps';
-			break;
 		case 10000:
 			return '10Gbps';
-			break;
 		case 5000:
 			return '5Gbps';
-			break;
 		case 2500:
 			return '2.5Gbps';
-			break;
 		case 1000:
 			return '1Gbps';
-			break;
 		case 100:
 			return '100Mbps';
-			break;
 		case 10:
 			return '10Mbps';
-			break;
 		default:
 			return '-';
 	}
@@ -2869,7 +2859,7 @@ function showmodem() {
 
 		arrmodemaddon = [];
 
-		switch(data.registration) {
+		switch (data.registration) {
 			case "0":
 				setValue('modem_registration', 'Brak sieci');
 				break;
@@ -2996,7 +2986,7 @@ function paramdesc(param, value) {
 	var description = '';
 	var color = '';
 	var title = '';
-	switch(param) {
+	switch (param) {
 		case 'rssi':
 			if (pvalue > -65) { color = '#2bdf5a'; description += 'doskonały'; }
 			if (pvalue > -75 && pvalue <= -65 ) { color = '#efff12'; description += 'dobry'; }
@@ -3553,14 +3543,20 @@ function showsitesurvey_praser(data) {
 	var l = arr.length;
 	for (var idx1 = 0; idx1 < l; idx1++) {
 		arr[idx1].timestamp = parseInt(ts).toString();
-		arr[idx1].ssid = (arr[idx1].ssid).replace(/(?:\\x[\da-fA-F]{2})+/g, function (val) {return decodeURIComponent(val.replace(/\\x/g, '%'))});
+		arr[idx1].ssid = (arr[idx1].ssid).replace(/(?:\\x[\da-fA-F]{2})+/g, function (val) {
+			try {
+				return decodeURIComponent(val.replace(/\\x/g, '%'));
+			} catch (e) {
+				return val;
+			}
+		});
 		if (arr[idx1].ssid == '') { arr[idx1].ssid = '<bez nazwy>'; }
 		arr[idx1].signal = parseInt(arr[idx1].signal);
 		if (isNaN(arr[idx1].signal)) { arr[idx1].signal = -100; }
 
 		if (arr[idx1].channel == "?") {
 			for (var i = 0; i < wlan_devices.length; i++) {
-				obj = config[wlan_devices[i]].wlan_channels;
+				var obj = config[wlan_devices[i]].wlan_channels;
 				for (var propt in obj) {
 					if (obj[propt][0] == arr[idx1].freq) {
 						arr[idx1].channel = propt;
@@ -3698,8 +3694,6 @@ function sitesurveycallback(sortby) {
 					counter_6 ++;
 					if (filterby != '6' && filterby != 'all') { continue; }
 					break;
-				default:
-					break;
 			}
 
 			rogueap = false;
@@ -3712,7 +3706,7 @@ function sitesurveycallback(sortby) {
 
 			html += '<hr><div class="row' + (rogueap ? ' text-danger' : '') + '">';
 			html += '<div class="col-xs-6">';
-			html += '<h4><span class="wordbreak">' + sorted[idx].ssid + '</span></h4>';
+			html += '<h4><span class="wordbreak">' + escapeHTML(sorted[idx].ssid) + '</span></h4>';
 			html += sorted[idx].mac;
 
 			var manuf = getmanuf(sorted[idx].mac);
@@ -3912,37 +3906,26 @@ var wifigraph = {
 		switch (graph.band) {
 			case 2:
 				return ((channel + 1) * graph.width) / 16 + wifigraph.axisLeft;
-				break;
 			case 51:
 				return ((channel - 34) * graph.width) / 32 + wifigraph.axisLeft;
-				break;
 			case 52:
 				return ((channel - 98) * graph.width) / 48 + wifigraph.axisLeft;
-				break;
 			case 53:
 				return ((channel - 147) * graph.width) / 28 + wifigraph.axisLeft;
-				break;
 			case 61:
 				return ((channel + 1) * graph.width) / 32 + wifigraph.axisLeft;
-				break;
 			case 62:
 				return ((channel - 32) * graph.width) / 30 + wifigraph.axisLeft;
-				break;
 			case 63:
 				return ((channel - 64) * graph.width) / 30 + wifigraph.axisLeft;
-				break;
 			case 64:
 				return ((channel - 96) * graph.width) / 30 + wifigraph.axisLeft;
-				break;
 			case 65:
 				return ((channel - 128) * graph.width) / 30 + wifigraph.axisLeft;
-				break;
 			case 66:
 				return ((channel - 160) * graph.width) / 30 + wifigraph.axisLeft;
-				break;
 			case 67:
 				return ((channel - 192) * graph.width) / 38 + wifigraph.axisLeft;
-				break;
 		}
 	},
 
@@ -5643,7 +5626,7 @@ function currentPeriod(start) {
 }
 
 function lastPeriod(start) {
-	d = new Date();
+	var d = new Date();
 	var days = [];
 	var i = 62;
 	var t = 0;
@@ -5788,12 +5771,10 @@ function showtraffic() {
 			var current_periodp = getCurrentPeriodDates(data.traffic_cyclep, data.traffic_cyclepcnt);
 			var last_periodp = getPreviousPeriodDates(data.traffic_cyclep, data.traffic_cyclepcnt);
 
-			diffdaysp = parseInt(data.traffic_cyclepcnt) - current_periodp.length + 1;
+			var diffdaysp = parseInt(data.traffic_cyclepcnt) - current_periodp.length + 1;
 			setValue('traffic_currentperiodp_daysleft', diffdaysp);
 
 			var traffic_today = 0;
-			var traffic_today_rx = 0;
-			var traffic_today_tx = 0;
 			var traffic_yesterday = 0;
 			var traffic_last7d = 0;
 			var traffic_last30d = 0;
@@ -5810,15 +5791,11 @@ function showtraffic() {
 			}
 			for (var idx = 0, n = traffic.length; idx < n; idx++) {
 				var t_date = traffic[idx].date;
-				var t_rx = traffic[idx].rx;
-				var t_tx = traffic[idx].tx;
-				var t_value = (parseInt(t_rx) || 0) + (parseInt(t_tx) || 0);
+				var t_value = (parseInt(traffic[idx].rx) || 0) + (parseInt(traffic[idx].tx) || 0);
 				if (total_since == '') { total_since = t_date; }
 
 				if (t_date == today[0]) {
 					traffic_today += parseInt(t_value);
-					traffic_today_rx += parseInt(t_rx);
-					traffic_today_tx += parseInt(t_tx);
 				}
 
 				if (t_date == yesterday[0]) {
@@ -6468,7 +6445,7 @@ function vpnstatus(interface) {
 				html += createRowForModal('Nazwa połączenia', escapeHTML(data.peers[idx].name));
 				html += createRowForModal('Wysłano', bytesToSize(data.peers[idx].tx));
 				html += createRowForModal('Pobrano', bytesToSize(data.peers[idx].rx));
-				t = '-';
+				var t = '-';
 				if (data.peers[idx].last_handshake != '') {
 					t = getDateTimeSince(data.peers[idx].last_handshake) + ' (' + formatDuration(data.peers[idx].last_handshake, true) + ' temu)';
 				}
@@ -6602,13 +6579,10 @@ function vpntype(proto) {
 	switch (proto) {
 		case 'openvpn':
 			return 'OpenVPN';
-			break;
 		case 'wireguard':
 			return 'WireGuard';
-			break;
 		case 'zerotier':
 			return 'ZeroTier';
-			break;
 		default:
 			return proto.toUpperCase();
 	}
@@ -7255,7 +7229,7 @@ function savewireguard() {
 
 	var cnt = parseInt(getValue('vpn_wireguard_ips')) || 0;
 	for (var idx = 0; idx < cnt; idx++) {
-		e = document.getElementById('vpn_wireguard_ip_' + idx);
+		var e = document.getElementById('vpn_wireguard_ip_' + idx);
 		if (e) {
 			if (validateIP(e.value) != 0) {
 				showError('vpn_wireguard_error', 'vpn_wireguard_ip_' + idx, 'Błąd w polu ' + getLabelText('vpn_wireguard_ip_' + idx));
@@ -8004,7 +7978,7 @@ function readgps() {
 				setValue('gps_speed', '-');
 				first = true;
 			} else {
-				fixtime = formatDuration(data.age, true) + ' temu';
+				var fixtime = formatDuration(data.age, true) + ' temu';
 				if (data.age > 3) {
 					fixtime += ' (' + formatDateTime(timestampToDate(Date.now()/1000 - data.age)) + ')';
 				}
@@ -8419,7 +8393,7 @@ function okremovenetwork() {
 	}
 	for (var i = 0; i < json.wireless.length; i++) {
 		for (var key in json.wireless[i]) {
-			t = json.wireless[i][key];
+			var t = json.wireless[i][key];
 			if (t.section != '') {
 				cmd.push('uci -q del wireless.' + t.section);
 			}
@@ -8594,7 +8568,7 @@ function savenetwork() {
 		}
 		cmd.push('uci set wireless.' + section + '.encryption=' + wlan_encryption);
 
-		wlan_key = getValue('network_wlan_key_' + i);
+		var wlan_key = getValue('network_wlan_key_' + i);
 		if (wlan_encryption != 'none') {
 			if (wlan_key.length < 8) {
 				showError('network_error', 'network_wlan_key_' + i, 'Błąd w polu ' + getLabelText('network_wlan_key_' + i) + ' dla ' + getValue('radio_' + i) + '<br><br>Hasło do Wi-Fi musi mieć co najmniej 8 znaków');
