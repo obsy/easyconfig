@@ -2495,7 +2495,7 @@ function showstatus() {
 		var isOffline = (data.wan_uptime == '' || !data.wan_tx || data.wan_tx == '0' || !data.wan_rx || data.wan_rx == '0');
 		toggleClass('topo-internet', 'down', isOffline);
 		toggleClass('l-1', 'down', isOffline);
-		setValue('topo-clients', 'połączonych: ' + (data.wlan_clients + data.lan_clients));
+		setValue('topo-clients', data.wlan_clients + data.lan_clients);
 	});
 }
 
