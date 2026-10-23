@@ -283,7 +283,7 @@ function addOption(element, value, text, attrs) {
 	opt.textContent = text;
 	if (attrs) {
 		for (var key in attrs) {
-			if (!Object.prototype.hasOwnProperty.call(attrs, key)) { continue };
+			if (!Object.prototype.hasOwnProperty.call(attrs, key)) { continue }
 			if (key === 'disabled') {
 				opt[key] = !!attrs[key];
 			} else {
@@ -1076,9 +1076,9 @@ var ubus = function(path, method, message, successHandler, errorHandler, showWai
 				errorHandler && errorHandler(status);
 			}
 		}
-	}
+	};
 	xhr.send(param);
-}
+};
 
 function ubus_error(error) {
 	closeMsg();
@@ -1329,6 +1329,7 @@ function setEncryption(element, is6, encryption) {
 		enc['psk2'] = 'WPA2 Personal';
 		if (config.services.sae) {
 			enc['sae-mixed'] = 'WPA2/WPA3 Personal';
+			enc['sae-compat'] = 'WPA2-PSK/WPA3-SAE Compatibility Mode';
 			enc['sae'] = 'WPA3 Personal';
 		}
 	}
@@ -9477,4 +9478,4 @@ function upload_file(file) {
 		}
 	};
 	reader.readAsText(file);
-};
+}
