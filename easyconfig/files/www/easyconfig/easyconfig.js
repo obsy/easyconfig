@@ -525,15 +525,6 @@ function createRow9ColForModal(arr) {
 		'</div>';
 }
 
-function getRevision() {
-	var revision = 0;
-	var tmp = config.revision.match(/^r([0-9]*)-[0-9a-f]*/);
-	if (tmp && tmp.length > 0) {
-		revision = parseInt(tmp[1]) || 0;
-	}
-	return revision;
-}
-
 function ipToInt(address) {
 	return address.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
 }
@@ -1328,8 +1319,8 @@ function setEncryption(element, is6, encryption) {
 		enc['psk'] = 'WPA Personal';
 		enc['psk2'] = 'WPA2 Personal';
 		if (config.services.sae) {
+			if (config.revision >= 33102) { enc['sae-compat'] = 'WPA2-PSK/WPA3-SAE Compatibility Mode'; }
 			enc['sae-mixed'] = 'WPA2/WPA3 Personal';
-			enc['sae-compat'] = 'WPA2-PSK/WPA3-SAE Compatibility Mode';
 			enc['sae'] = 'WPA3 Personal';
 		}
 	}
@@ -1436,8 +1427,6 @@ function showconfig() {
 		// wlan
 		showChannelRange(config.wlan_current_channels);
 
-		var revision = getRevision();
-
 		var is_radio2 = false;
 		var is_radio5 = false;
 		var is_radio6 = false;
@@ -1539,7 +1528,7 @@ function showconfig() {
 			enableWlanEncryption('', config[radios[i]].wlan_encryption, '_' + i);
 			setValue('wlan_isolate_' + i, config[radios[i]].wlan_isolate == 1);
 			setValue('wlan_hidden_' + i, config[radios[i]].wlan_hidden == 1);
-			if (revision > 20293 && (config[radios[i]].wlan_macaddr === 'random' || config[radios[i]].wlan_macaddr === '')) {
+			if (config.revision >= 20293 && (config[radios[i]].wlan_macaddr === 'random' || config[radios[i]].wlan_macaddr === '')) {
 				setValue('wlan_macaddr_' + i, config[radios[i]].wlan_macaddr === 'random');
 				setDisplay('div_wlan_macaddr_' + i, true);
 			} else {
@@ -1991,8 +1980,6 @@ function saveconfig() {
 	}
 
 	// wlan
-	var revision = getRevision();
-
 	var wlan_restart_required = false;
 
 	var radios = config.wlan_devices;
@@ -2098,7 +2085,7 @@ function saveconfig() {
 			cmd.push('uci -q del wireless.' + section + '.hidden');
 		}
 
-		if (revision > 20293 && (config[radios[i]].wlan_macaddr === 'random' || config[radios[i]].wlan_macaddr === '')) {
+		if (config.revision >= 20293 && (config[radios[i]].wlan_macaddr === 'random' || config[radios[i]].wlan_macaddr === '')) {
 			if (getValue('wlan_macaddr_' + i)) {
 				if (config[radios[i]].wlan_macaddr != 'random') {
 					wlan_restart_required = true;
@@ -8293,8 +8280,6 @@ function networkdetails(data) {
 	setValue('network_towan', json.forwarding != '');
 	setValue('div_network_interfaces_content', '');
 
-	var revision = getRevision();
-
 	var radios = config.wlan_devices;
 	for (var i = 0; i < radios.length; i++) {
 		var vap = null;
@@ -8326,7 +8311,7 @@ function networkdetails(data) {
 		setValue('network_wlan_isolate_' + i, vap.isolate == 1);
 		setValue('network_wlan_hidden_' + i, vap.hidden == 1);
 
-		if (revision > 20293 && (vap.macaddr === 'random' || vap.macaddr === '')) {
+		if (config.revision >= 20293 && (vap.macaddr === 'random' || vap.macaddr === '')) {
 			setValue('network_wlan_macaddr_' + i, vap.macaddr === 'random');
 			setDisplay('div_network_wlan_macaddr_' + i, true);
 		} else {
@@ -8510,8 +8495,6 @@ function savenetwork() {
 	}
 
 	// wlan
-	var revision = getRevision();
-
 	var wlan_restart_required = false;
 
 	var radios = config.wlan_devices;
@@ -8605,7 +8588,7 @@ function savenetwork() {
 			cmd.push('uci -q del wireless.' + section + '.hidden');
 		}
 
-		if (revision > 20293 && (vap.macaddr === 'random' || vap.macaddr === '')) {
+		if (config.revision >= 20293 && (vap.macaddr === 'random' || vap.macaddr === '')) {
 			if (getValue('network_wlan_macaddr_' + i)) {
 				if (vap.macaddr != 'random') {
 					wlan_restart_required = true;

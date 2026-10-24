@@ -536,14 +536,14 @@ if [ -n "$WAN_IFNAME_DEFAULT" ]; then
 	fi
 fi
 
-REVISION=$(awk -F\' '/DISTRIB_REVISION/{print $2}' /etc/openwrt_release)
+REVISION=$(awk '/^DISTRIB_REVISION/ {match($0, /r[0-9]+/); print substr($0, RSTART+1, RLENGTH-1)}' /etc/openwrt_release)
 
 WAN_USERNAME=$(uci -q get network.wan.username)
 WAN_PASSWORD=$(uci -q get network.wan.password)
 WAN_KEEPALIVE=$(uci -q get network.wan.keepalive)
 
 echo '{'
-echo '"revision":"'$REVISION'",'
+echo '"revision":'${REVISION:-0}','
 echo '"devicesection":'$DEVICESECTION','
 echo '"swconfig":'$SWCONFIG','
 echo '"system_hostname":"'$HOSTNAME'",'
