@@ -797,7 +797,7 @@ function detectwan(pin) {
 			msg += '<div class="row space">';
 			msg += '<div class="col-xs-6 text-right">Typ połączenia</div>';
 			if (data.proto == 'dhcp' || data.proto == 'dhcp_rndis') {
-				msg += '<div class="col-xs-6 text-left">' + wan[data.proto] + '</div>';
+				msg += '<div class="col-xs-6 text-left">' + wandesc[data.proto] + '</div>';
 			}
 			if (data.proto == 'dhcp_rndis') {
 				msg += '</div>';
@@ -1289,20 +1289,20 @@ function showChannelRange(current_channels) {
 	}
 }
 
-var wan = [];
-wan['none'] = 'Brak';
-wan['dhcp'] = 'Port WAN (DHCP)';
-wan['static'] = 'Port WAN (Statyczny IP)';
-wan['pppoe'] = 'PPPoE';
-wan['3g'] = 'Modem komórkowy (RAS)';
-wan['mbim'] = 'Modem komórkowy (MBIM)';
-wan['modemmanager'] = 'Modem komórkowy';
-wan['ncm'] = 'Modem komórkowy (NCM)';
-wan['qmi'] = 'Modem komórkowy (QMI)';
-wan['dhcp_rndis'] = 'Modem komórkowy (HiLink lub RNDIS)';
-wan['xmm'] = 'Modem komórkowy Fibocom L850/L860/FM350';
-wan['-'] = ' ';
-wan['detect'] = 'Wykryj...';
+var wandesc = [];
+wandesc['none'] = 'Brak';
+wandesc['dhcp'] = 'Port WAN (DHCP)';
+wandesc['static'] = 'Port WAN (Statyczny IP)';
+wandesc['pppoe'] = 'PPPoE';
+wandesc['3g'] = 'Modem komórkowy (RAS)';
+wandesc['mbim'] = 'Modem komórkowy (MBIM)';
+wandesc['modemmanager'] = 'Modem komórkowy';
+wandesc['ncm'] = 'Modem komórkowy (NCM)';
+wandesc['qmi'] = 'Modem komórkowy (QMI)';
+wandesc['dhcp_rndis'] = 'Modem komórkowy (HiLink lub RNDIS)';
+wandesc['xmm'] = 'Modem komórkowy Fibocom L850/L860/FM350';
+wandesc['-'] = ' ';
+wandesc['detect'] = 'Wykryj...';
 
 function setEncryption(element, is6, encryption) {
 	var enc = [];
@@ -1344,15 +1344,15 @@ function showconfig() {
 		arr.push('-');
 		arr.push('detect');
 		for (var idx = 0; idx < arr.length; idx++) {
-			addOption(e, arr[idx], wan[arr[idx]], arr[idx] == '-' ? { disabled: true } : null);
+			addOption(e, arr[idx], wandesc[arr[idx]], arr[idx] == '-' ? { disabled: true } : null);
 		}
-		if (!(config.wan_proto in wan)) {
-			addOption(e, 'unknown', 'Nieobsługiwany');
+		if (!(config.wan_proto in wandesc)) {
+			addOption(e, 'unknown', 'Nieobsługiwany (' + config.wan_proto + ')');
 		}
 
 		e = removeOptions('wan_device');
 		var arr = config.wan_devices;
-		for (var idx = 0; idx<arr.length; idx++) {
+		for (var idx = 0; idx < arr.length; idx++) {
 			addOption(e, arr[idx], arr[idx]);
 		}
 
@@ -1397,7 +1397,7 @@ function showconfig() {
 		setValue('wan_pincode', config.wan_pincode);
 		setValue('wan_dns1', (config.wan_dns.length > 0 ? config.wan_dns[0] : ''));
 		setValue('wan_dns2', (config.wan_dns.length > 1 ? config.wan_dns[1] : ''));
-		setValue('wan_proto', (config.wan_proto in wan) ? config.wan_proto : 'unknown');
+		setValue('wan_proto', (config.wan_proto in wandesc) ? config.wan_proto : 'unknown');
 		setValue('wan_username', config.wan_username);
 		setValue('wan_password', config.wan_password);
 		var keepalive = (config.wan_keepalive).split(' ');
@@ -2332,81 +2332,540 @@ function portLabel(port) {
 	return found ? found.name : port.toUpperCase();
 }
 
-function showstatus() {
-	ubus_call('easyconfig', 'status', {}, function(data) {
-		simslot = data.simslot;
-		setValue('system_uptime', formatDuration(data.system_uptime, false));
-		setValue('system_uptime_since', ' (od ' + getDateTimeSince(data.system_uptime) + ')');
-		setValue('system_load', data.system_load);
-		setValue('system_time', data.system_time == '' ? '-' : formatDateTime(data.system_time));
-		setValue('wlan_clients', data.wlan_clients + ' &rarr;');
-		setValue('lan_clients', data.lan_clients + ' &rarr;');
-		setValue('wan_rx', data.wan_rx == '' ? '-' : '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(data.wan_rx) + '</span>');
-		setValue('wan_tx', data.wan_tx == '' ? '-' : '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(data.wan_tx) + '</span>');
-		setValue('wan_uptime', formatDuration(data.wan_uptime, false));
-		setValue('wan_uptime_since', (data.wan_uptime == '') ? '' : ' (od ' + getDateTimeSince(data.wan_uptime) + ')');
-		setValue('wan_up_cnt', (data.wan_up_cnt == '') ? '0' : '<span class="click" onclick="showwanup(\'' + btoa(JSON.stringify(data.wan_ups)) + '\');">' + data.wan_up_cnt + '</span>');
-		setValue('wan_ipaddr_status', (data.wan_ipaddr == '') ? '-' : '<span class="click" onclick="showgeolocation();">' + data.wan_ipaddr + '</span>');
-		setValue('wan_netmask_status', (data.wan_netmask == '') ? '-' : data.wan_netmask);
-		setValue('wan_gateway_status', (data.wan_gateway == '') ? '-' : data.wan_gateway);
-		var t = (data.wan_dns).slice(0,2).sort().join('<br>');
-		setValue('wan_dns_status', t != '' ? t : '-');
-		setDisplay('div_vpn_up_status', data.vpn_up);
-		if ((data.sensors).length > 0) {
-			var html = '';
-			for (var i in data.sensors) {
-				for (var j in data.sensors[i]) {
-					html += '<div class="row"><div class="col-xs-6 text-right">' + j + '</div>';
-					html += '<div class="col-xs-6"><p>' + data.sensors[i][j] + '</p></div></div>';
-				}
-			}
-			setValue('div_status_sensors_addon', html);
-			setDisplay('div_status_sensors', true);
-		} else {
-			setDisplay('div_status_sensors', false);
-		}
-		showChannelRange(data.wlan_current_channels);
+/* topo: network path  */
 
+var TOPO_NS = 'http://www.w3.org/2000/svg';
+var TOPO_ICONS = {
+	globe: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z', 'M3.4 9.2h17.2M3.4 14.8h17.2', 'M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9c-2.4-2.5-3.6-5.5-3.6-9s1.2-6.5 3.6-9Z'],
+	router: ['M4.5 13h15a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z', 'M7 16h.01M10 16h.01', 'M8 13 6 6.5M16 13l2-6.5'],
+	down: ['M12 5v14', 'M6.5 13.5 12 19l5.5-5.5'],
+	up: ['M12 19V5', 'M6.5 10.5 12 5l5.5 5.5'],
+	lock: ['M6.5 11h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
+	unlock: ['M6.5 11h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z', 'M8.5 11V8a3.5 3.5 0 0 1 6.8-1.2']
+};
+var TOPO_BUSY = 50e3;
+var TOPO_RATE_MS = 2000;
+var TOPO_DATA_MS = 10000;
+
+var topo = { key: null, n: null, model: null, data: null, ifaces: [], counters: {}, rates: {}, wires: {}, rateTimer: null, dataTimer: null, pending: false, ro: null };
+
+function topoEl(tag, cls, kids) {
+	var e = document.createElement(tag);
+	if (cls) { e.className = cls; }
+	if (kids) {
+		for (var i = 0; i < kids.length; i++) {
+			if (kids[i]) { e.appendChild(kids[i]); }
+		}
+	}
+	return e;
+}
+
+function topoSvg(tag, attrs) {
+	var e = document.createElementNS(TOPO_NS, tag);
+	for (var k in attrs) {
+		e.setAttribute(k, attrs[k]);
+	}
+	return e;
+}
+
+function topoIcon(name, cls) {
+	var s = topoSvg('svg', { 'class': 'topo-icon' + (cls ? ' ' + cls : ''), 'viewBox': '0 0 24 24', 'aria-hidden': 'true', 'focusable': 'false' });
+	var list = TOPO_ICONS[name];
+	for (var i = 0; i < list.length; i++) {
+		s.appendChild(topoSvg('path', { 'd': list[i] }));
+	}
+	return s;
+}
+
+function topoText(e, t) {
+	if (e.textContent !== t) { e.textContent = t; }
+}
+
+function topoClass(e, c) {
+	if (e.className !== c) { e.className = c; }
+}
+
+function topoBits(bps) {
+	var u = ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s'];
+	var i = 0;
+	while (bps >= 1000 && i < 3) { bps /= 1000; i++; }
+	return { v: (i > 0 && bps < 10) ? bps.toFixed(1) : String(Math.round(bps)), u: u[i] };
+}
+
+function topoBandLabel(freq) {
+	var b = freq2band(freq);
+	if (b == 2) { return '2.4 GHz'; }
+	if (b == 5) { return '5 GHz'; }
+	if (b == 6) { return '6 GHz'; }
+	return 'Wi-Fi';
+}
+
+function topoBandClass(freq) {
+	var b = freq2band(freq);
+	return b == 2 ? '2g' : b == 5 ? '5g' : b == 6 ? '6g' : 'x';
+}
+
+function topoGen(hwmode) {
+	hwmode = hwmode || '';
+	if (hwmode.indexOf('be') >= 0) { return 'Wi-Fi 7'; }
+	if (hwmode.indexOf('ax') >= 0) { return 'Wi-Fi 6'; }
+	if (hwmode.indexOf('ac') >= 0) { return 'Wi-Fi 5'; }
+	if (hwmode.indexOf('n') >= 0) { return 'Wi-Fi 4'; }
+	return '';
+}
+
+function topoClients(n) {
+	var m10 = n % 10, m100 = n % 100;
+	if (n == 1) { return '1 klient'; }
+	if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) { return n + ' klienci'; }
+	return n + ' klientów';
+}
+
+function topoSpeed(bps) {
+	return bps > 100e6 ? 3 : bps > 5e6 ? 2 : 1;
+}
+
+function topoModel(data) {
+	var cur = data.wlan_current_channels || [];
+	var byPhy = {};
+	var i;
+	for (i = 0; i < cur.length; i++) {
+		if (!byPhy[cur[i].phy]) { byPhy[cur[i].phy] = []; }
+		byPhy[cur[i].phy].push(cur[i]);
+	}
+	var radios = [];
+	var seen = {};
+	var devs = config.wlan_devices || [];
+	for (i = 0; i < devs.length; i++) {
+		var c = config[devs[i]];
+		var list = byPhy[c.wlan_phy] || [];
+		var freq = list.length ? list[0].freq : 0;
+		if (!freq) {
+			for (var ch in c.wlan_channels) {
+				freq = c.wlan_channels[ch][0];
+				break;
+			}
+		}
+		radios.push({ id: devs[i], freq: freq, gen: topoGen(c.wlan_hwmode), disabled: c.wlan_disabled == 1, list: list, cfg: c });
+		seen[c.wlan_phy] = true;
+	}
+	for (var phy in byPhy) {
+		if (!seen[phy]) {
+			radios.push({ id: phy, freq: byPhy[phy][0].freq, gen: '', disabled: false, list: byPhy[phy], cfg: null });
+		}
+	}
+	radios.sort(function(a, b) { return (a.freq || 99999) - (b.freq || 99999); });
+	return radios;
+}
+
+function topoBuild(radios, key) {
+	var path = document.getElementById('topo-path');
+	if (!path) { return; }
+	while (path.firstChild) { path.removeChild(path.firstChild); }
+	path.className = 'topo-path' + (radios.length ? '' : ' topo-nowifi');
+	var n = { radios: [] };
+	topo.wires = {};
+
+	n.wires = topoSvg('svg', { 'class': 'topo-wires', 'viewBox': '0 0 10 10', 'aria-hidden': 'true' });
+	path.appendChild(n.wires);
+
+	n.gwKicker = topoEl('span', 'topo-kicker');
+	n.gwTitle = topoEl('span', 'topo-title');
+	n.gwSub = topoEl('span', 'topo-sub');
+	n.gw = topoEl('div', 'topo-node topo-node-gw', [
+		topoEl('span', 'topo-ico', [topoIcon('globe')]),
+		topoEl('span', 'topo-body', [n.gwKicker, n.gwTitle, n.gwSub])
+	]);
+
+	n.upVal = topoEl('b'); n.upUnit = topoEl('small');
+	n.dnVal = topoEl('b'); n.dnUnit = topoEl('small');
+	n.linkMeta = topoEl('span', 'topo-link-meta');
+	n.link = topoEl('div', 'topo-link-label', [
+		topoEl('span', 'topo-rate topo-rate-up', [topoIcon('up'), n.upVal, n.upUnit]),
+		topoEl('span', 'topo-link-below', [
+			topoEl('span', 'topo-rate topo-rate-down', [topoIcon('down'), n.dnVal, n.dnUnit]),
+			n.linkMeta
+		])
+	]);
+
+	n.apKicker = topoEl('span', 'topo-kicker');
+	n.apTitle = topoEl('span', 'topo-title');
+	n.apAddr = topoEl('span', 'topo-sub topo-mono');
+	n.apUp = topoEl('span', 'topo-sub');
+	n.ap = topoEl('div', 'topo-node topo-node-ap', [
+		topoEl('span', 'topo-ico', [topoIcon('router')]),
+		topoEl('span', 'topo-body', [n.apKicker, n.apTitle, n.apAddr, n.apUp])
+	]);
+
+	n.branches = topoEl('div', 'topo-branches');
+
+	for (var i = 0; i < radios.length; i++) {
+		var r = radios[i];
+		var b = { id: r.id, ssids: [] };
+		b.badge = topoEl('span', 'topo-band');
+		b.gen = topoEl('span', 'topo-gen');
+		b.title = topoEl('span', 'topo-title');
+		b.sub = topoEl('span', 'topo-sub');
+		b.el = topoEl('div', 'topo-node topo-node-radio', [
+			topoEl('span', 'topo-body', [topoEl('span', 'topo-kicker', [b.badge, b.gen]), b.title, b.sub])
+		]);
+		var col = topoEl('div', 'topo-branch-ssids');
+		for (var j = 0; j < r.list.length; j++) {
+			var sn = { iface: r.list[j].interface, tone: null, ico: null };
+			sn.name = topoEl('span');
+			sn.title = topoEl('span', 'topo-title topo-ssid-name', [sn.name]);
+			sn.count = topoEl('span', 'topo-sub');
+			sn.el = topoEl('a', 'topo-node topo-node-ssid', [topoEl('span', 'topo-body', [sn.title, sn.count])]);
+			sn.el.href = '#';
+			sn.el.draggable = false;
+			sn.el.onclick = function() { btn_pages('clients'); return false; };
+			b.ssids.push(sn);
+			col.appendChild(sn.el);
+		}
+		b.wrap = topoEl('div', 'topo-branch', [b.el, col]);
+		n.radios.push(b);
+		n.branches.appendChild(b.wrap);
+	}
+
+	n.lanKicker = topoEl('span', 'topo-kicker');
+	n.lanTitle = topoEl('span', 'topo-title topo-mono');
+	n.lanSub = topoEl('span', 'topo-sub');
+	n.lan = topoEl('a', 'topo-node topo-node-radio topo-node-net', [
+		topoEl('span', 'topo-body', [n.lanKicker, n.lanTitle, n.lanSub])
+	]);
+	n.lan.href = '#';
+	n.lan.draggable = false;
+	n.lan.onclick = function() { btn_pages('clients'); return false; };
+	n.branches.appendChild(topoEl('div', 'topo-branch', [n.lan]));
+
+	path.appendChild(n.gw);
+	path.appendChild(n.link);
+	path.appendChild(n.ap);
+	path.appendChild(n.branches);
+
+	topo.n = n;
+	topo.key = key;
+	if (window.ResizeObserver) {
+		if (!topo.ro) { topo.ro = new ResizeObserver(function() { topoSchedule(); }); }
+		topo.ro.disconnect();
+		topo.ro.observe(path);
+	}
+}
+
+function topoUpdate(data) {
+	topo.data = data;
+	var radios = topoModel(data);
+	topo.model = radios;
+	var key = [];
+	var ifaces = [];
+	for (var i = 0; i < radios.length; i++) {
+		var names = [];
+		for (var j = 0; j < radios[i].list.length; j++) {
+			names.push(radios[i].list[j].interface);
+			ifaces.push(radios[i].list[j].interface);
+		}
+		key.push(radios[i].id + ':' + names.join(','));
+	}
+	key = key.join('|');
+	var path = document.getElementById('topo-path');
+	if (!path) { return; }
+	if (!topo.n || topo.key !== key || !path.contains(topo.n.gw)) { topoBuild(radios, key); }
+	topo.ifaces = ifaces;
+	topoPaint();
+}
+
+function topoRadioRate(b) {
+	var rx = 0, tx = 0, any = false;
+	for (var i = 0; i < b.ssids.length; i++) {
+		var r = topo.rates[b.ssids[i].iface];
+		if (r) { any = true; rx += r.rx; tx += r.tx; }
+	}
+	return any ? { rx: rx, tx: tx } : null;
+}
+
+function topoOffline(data) {
+	return (data.wan_uptime == '' || !data.wan_tx || data.wan_tx == '0' || !data.wan_rx || data.wan_rx == '0');
+}
+
+function topoPaint() {
+	var n = topo.n, data = topo.data, radios = topo.model;
+	if (!n || !data || !radios) { return; }
+	var offline = topoOffline(data);
+	var wan = topo.rates.wan || null;
+
+	topoText(n.gwKicker, 'Internet');
+	topoText(n.gwTitle, data.wan_gateway ? data.wan_gateway : '-');
+	topoText(n.gwSub, (data.wan_dns && data.wan_dns.length) ? 'DNS ' + data.wan_dns[0] : (offline ? 'Brak połączenia' : '-'));
+	topoClass(n.gw, 'topo-node topo-node-gw' + (offline ? ' topo-node-off' : ''));
+
+	var dn = wan ? topoBits(wan.rx) : { v: '-', u: '' };
+	var up = wan ? topoBits(wan.tx) : { v: '-', u: '' };
+	topoText(n.dnVal, dn.v); topoText(n.dnUnit, dn.u);
+	topoText(n.upVal, up.v); topoText(n.upUnit, up.u);
+	topoText(n.linkMeta, (config.wan_proto && config.wan_proto != 'none' ? (wandesc[config.wan_proto] ?? config.wan_proto) : ''));
+	n.gwActive = !!(wan && !offline && wan.rx + wan.tx > TOPO_BUSY);
+	n.gwRate = wan ? wan.rx + wan.tx : 0;
+	n.offline = offline;
+
+	topoText(n.apKicker, 'To urządzenie');
+	topoText(n.apTitle, config.system_hostname || 'Router');
+	topoText(n.apAddr, data.wan_ipaddr ? data.wan_ipaddr : '-');
+	topoText(n.apUp, data.system_uptime != '' ? 'działa ' + formatDuration(data.system_uptime, false) : '');
+
+	for (var i = 0; i < n.radios.length && i < radios.length; i++) {
+		var b = n.radios[i], r = radios[i];
+		var first = r.list.length ? r.list[0] : null;
+		var rr = topoRadioRate(b);
+		var off = r.disabled || !r.list.length;
+		topoClass(b.el, 'topo-node topo-node-radio' + (off ? ' topo-node-off' : ''));
+		topoClass(b.badge, 'topo-band topo-band-' + topoBandClass(r.freq));
+		topoText(b.badge, topoBandLabel(r.freq));
+		topoText(b.gen, r.gen);
+		topoText(b.title, first && first.channel ? 'Kanał ' + first.channel + ' · ' + (first.width || 20) + ' MHz' : 'Kanał -');
+		topoText(b.sub, r.disabled ? 'Wyłączone' : !r.list.length ? 'Nieaktywne' : rr ? '↓ ' + topoBits(rr.tx).v + ' ' + topoBits(rr.tx).u : '-');
+		b.active = !!(rr && rr.rx + rr.tx > TOPO_BUSY);
+		b.rate = rr ? rr.rx + rr.tx : 0;
+		for (var j = 0; j < b.ssids.length; j++) {
+			var sn = b.ssids[j], l = r.list[j];
+			if (!l) { continue; }
+			var clients = l.clients || 0;
+			var tone = null;
+			var hidden = '';
+			if (r.cfg && r.cfg.wlan_ssid === l.ssid) {
+				tone = r.cfg.wlan_encryption == 'none' ? 'unlock' : 'lock';
+				hidden = r.cfg.wlan_hidden == 0 ? '' : ' (ukryta)';
+			}
+			if (sn.tone !== tone) {
+				if (sn.ico) { sn.title.removeChild(sn.ico); sn.ico = null; }
+				if (tone) { sn.ico = topoIcon(tone, 'topo-icon-sm'); sn.title.insertBefore(sn.ico, sn.name); }
+				sn.tone = tone;
+			}
+			topoClass(sn.el, 'topo-node topo-node-ssid' + (clients ? '' : ' topo-node-idle'));
+			topoText(sn.name, l.ssid ? (l.ssid + hidden) : '-' );
+			topoText(sn.count, topoClients(clients));
+			var sr = topo.rates[sn.iface];
+			sn.active = !!(sr && sr.rx + sr.tx > TOPO_BUSY);
+		}
+	}
+
+	topoText(n.lanKicker, 'Sieć lokalna');
+	topoText(n.lanTitle, config.lan_ipaddr || '-');
+	topoText(n.lanSub, topoClients(data.lan_clients || 0));
+	topoClass(n.lan, 'topo-node topo-node-radio topo-node-net' + (data.lan_clients ? '' : ' topo-node-idle'));
+
+	topoSchedule();
+}
+
+function topoWireList() {
+	var n = topo.n, out = [];
+	if (!n || !n.gw) { return out; }
+	out.push({ key: 'gw', from: n.gw, to: n.ap, active: n.gwActive, speed: topoSpeed(n.gwRate), main: true, down: n.offline });
+	for (var i = 0; i < n.radios.length; i++) {
+		var b = n.radios[i];
+		out.push({ key: 'r:' + b.id, from: n.ap, to: b.el, active: b.active, speed: topoSpeed(b.rate) });
+		for (var j = 0; j < b.ssids.length; j++) {
+			out.push({ key: 's:' + b.id + ':' + j, from: b.el, to: b.ssids[j].el, active: b.ssids[j].active, speed: 1 });
+		}
+	}
+	out.push({ key: 'lan', from: n.ap, to: n.lan, active: false, still: !!(topo.data && topo.data.lan_clients), speed: 1 });
+	return out;
+}
+
+function topoCurve(a, b) {
+	function f(v) { return v.toFixed(1); }
+	if (b.l >= a.r - 2) {
+		var mx = (a.r + b.l) / 2;
+		return 'M' + f(a.r) + ' ' + f(a.cy) + 'C' + f(mx) + ' ' + f(a.cy) + ' ' + f(mx) + ' ' + f(b.cy) + ' ' + f(b.l) + ' ' + f(b.cy);
+	}
+	var x1 = a.l + 18, y1 = a.b, x2 = b.l, y2 = b.cy;
+	if (x2 <= x1 + 6) { return 'M' + f(x1) + ' ' + f(y1) + 'V' + f(b.t); }
+	var rad = Math.min(8, Math.max(0, y2 - y1));
+	return 'M' + f(x1) + ' ' + f(y1) + 'V' + f(y2 - rad) + 'Q' + f(x1) + ' ' + f(y2) + ' ' + f(x1 + rad) + ' ' + f(y2) + 'H' + f(x2);
+}
+
+function topoSchedule() {
+	if (topo.pending) { return; }
+	topo.pending = true;
+	window.requestAnimationFrame(function() { topo.pending = false; topoDraw(); });
+}
+
+function topoDraw() {
+	var path = document.getElementById('topo-path'), n = topo.n;
+	if (!path || !n || !n.gw || !path.contains(n.gw)) { return; }
+	var box = path.getBoundingClientRect();
+	if (!box.width) { return; }
+	var svg = n.wires;
+	var w = Math.round(box.width), h = Math.round(box.height);
+	if (svg.getAttribute('viewBox') !== '0 0 ' + w + ' ' + h) {
+		svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+		svg.setAttribute('width', w);
+		svg.setAttribute('height', h);
+	}
+	function rect(el) {
+		var b = el.getBoundingClientRect();
+		return { l: b.left - box.left, r: b.right - box.left, t: b.top - box.top, b: b.bottom - box.top, cy: (b.top + b.bottom) / 2 - box.top };
+	}
+	var list = topoWireList(), seen = {};
+	for (var i = 0; i < list.length; i++) {
+		var wd = list[i];
+		seen[wd.key] = true;
+		var g = topo.wires[wd.key];
+		if (!g) {
+			g = topo.wires[wd.key] = { base: topoSvg('path'), flow: topoSvg('path'), d: null };
+			svg.appendChild(g.base);
+			svg.appendChild(g.flow);
+		}
+		var d = topoCurve(rect(wd.from), rect(wd.to));
+		if (g.d !== d) {
+			g.base.setAttribute('d', d);
+			g.flow.setAttribute('d', d);
+			g.d = d;
+		}
+		var on = !wd.down && (wd.active || wd.still);
+		g.base.setAttribute('class', 'topo-wire' + (wd.main ? ' topo-wire-main' : '') + (wd.down ? ' topo-wire-down' : '') + (on ? ' topo-wire-on' : ''));
+		g.flow.setAttribute('class', 'topo-flow topo-flow-' + wd.speed + (wd.active && !wd.down ? ' topo-flow-on' : ''));
+	}
+	for (var k in topo.wires) {
+		if (!seen[k]) {
+			svg.removeChild(topo.wires[k].base);
+			svg.removeChild(topo.wires[k].flow);
+			delete topo.wires[k];
+		}
+	}
+}
+
+function topoVisible() {
+	var p = document.getElementById('topo-path');
+	return !!(p && p.offsetParent !== null);
+}
+
+function topoCount(key, dev, devs, now) {
+	var d = dev ? devs[dev] : null;
+	if (!d || !d.statistics) { return; }
+	var old = topo.counters[key];
+	var rx = d.statistics.rx_bytes, tx = d.statistics.tx_bytes;
+	if (old && now > old.t) {
+		var dt = (now - old.t) / 1000;
+		var drx = rx - old.rx, dtx = tx - old.tx;
+		if (drx < 0) { drx = 0; }
+		if (dtx < 0) { dtx = 0; }
+		topo.rates[key] = { rx: drx * 8 / dt, tx: dtx * 8 / dt };
+	}
+	topo.counters[key] = { t: now, rx: rx, tx: tx };
+}
+
+function topoPoll() {
+	if (!topoVisible()) { topoStop(); return; }
+	ubus_call_nomsg('network.device', 'status', {}, function(devs) {
+		if (!devs) { return; }
+		var now = (new Date()).getTime();
+		topoCount('wan', config.wan_ifname, devs, now);
+		for (var i = 0; i < topo.ifaces.length; i++) {
+			topoCount(topo.ifaces[i], topo.ifaces[i], devs, now);
+		}
+		topoPaint();
+	});
+}
+
+function topoRefresh() {
+	if (!topoVisible()) { topoStop(); return; }
+	ubus_call_nomsg('easyconfig', 'status', {}, function(data) {
+		updateStatus(data);
+		topoUpdate(data);
+	});
+}
+
+function topoStart() {
+	if (!topo.rateTimer) { topo.rateTimer = setInterval(topoPoll, TOPO_RATE_MS); }
+	if (!topo.dataTimer) { topo.dataTimer = setInterval(topoRefresh, TOPO_DATA_MS); }
+}
+
+function topoStop() {
+	clearInterval(topo.rateTimer); topo.rateTimer = null;
+	clearInterval(topo.dataTimer); topo.dataTimer = null;
+	topo.counters = {};
+	topo.rates = {};
+}
+
+function updateStatus(data) {
+	setValue('system_uptime', formatDuration(data.system_uptime, false));
+	setValue('system_uptime_since', ' (od ' + getDateTimeSince(data.system_uptime) + ')');
+	setValue('system_load', data.system_load);
+	setValue('system_time', data.system_time == '' ? '-' : formatDateTime(data.system_time));
+	setValue('wlan_clients', data.wlan_clients + ' &rarr;');
+	setValue('lan_clients', data.lan_clients + ' &rarr;');
+	setValue('wan_rx', data.wan_rx == '' ? '-' : '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(data.wan_rx) + '</span>');
+	setValue('wan_tx', data.wan_tx == '' ? '-' : '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(data.wan_tx) + '</span>');
+	setValue('wan_uptime', formatDuration(data.wan_uptime, false));
+	setValue('wan_uptime_since', (data.wan_uptime == '') ? '' : ' (od ' + getDateTimeSince(data.wan_uptime) + ')');
+	setValue('wan_up_cnt', (data.wan_up_cnt == '') ? '0' : '<span class="click" onclick="showwanup(\'' + btoa(JSON.stringify(data.wan_ups)) + '\');">' + data.wan_up_cnt + '</span>');
+	setValue('wan_ipaddr_status', (data.wan_ipaddr == '') ? '-' : '<span class="click" onclick="showgeolocation();">' + data.wan_ipaddr + '</span>');
+	setValue('wan_netmask_status', (data.wan_netmask == '') ? '-' : data.wan_netmask);
+	setValue('wan_gateway_status', (data.wan_gateway == '') ? '-' : data.wan_gateway);
+	var t = (data.wan_dns).slice(0,2).sort().join('<br>');
+	setValue('wan_dns_status', t != '' ? t : '-');
+	setDisplay('div_vpn_up_status', data.vpn_up);
+	if ((data.sensors).length > 0) {
+		var html = '';
+		for (var i in data.sensors) {
+			for (var j in data.sensors[i]) {
+				html += '<div class="row"><div class="col-xs-6 text-right">' + j + '</div>';
+				html += '<div class="col-xs-6"><p>' + data.sensors[i][j] + '</p></div></div>';
+			}
+		}
+		setValue('div_status_sensors_addon', html);
+		setDisplay('div_status_sensors', true);
+	} else {
+		setDisplay('div_status_sensors', false);
+	}
+	showChannelRange(data.wlan_current_channels);
+
+	if ((data.ports).length > 0) {
+		for (var idx = 0; idx < (data.ports_swconfig).length; idx++) {
+			var idx1 = (data.ports).findIndex(x => x.port === data.ports_swconfig[idx].port);
+			if (idx1 > -1) {
+				(data.ports).splice(idx1, 1);
+			}
+			(data.ports).push({'port': ((data.ports_swconfig[idx]).role == 'wan' ? 'wan' : (data.ports_swconfig[idx]).role + (data.ports_swconfig[idx]).id), 'speed': (data.ports_swconfig[idx]).speed, 'macs': -1});
+		}
 		if ((data.ports).length > 0) {
-			for (var idx = 0; idx < (data.ports_swconfig).length; idx++) {
-				var idx1 = (data.ports).findIndex(x => x.port === data.ports_swconfig[idx].port);
-				if (idx1 > -1) {
-					(data.ports).splice(idx1, 1);
-				}
-				(data.ports).push({'port': ((data.ports_swconfig[idx]).role == 'wan' ? 'wan' : (data.ports_swconfig[idx]).role + (data.ports_swconfig[idx]).id), 'speed': (data.ports_swconfig[idx]).speed, 'macs': -1});
-			}
-			if ((data.ports).length > 0) {
-				physicalports = data.ports;
-				portsmapping = data.ports_mapping;
-				var sorted;
-				if (portsmapping.length > 0) {
-					data.ports.forEach(e => {
-						var found = portsmapping.find(p => p.port === e.port);
-						e.id = found ? found.id : 0;
-					});
-					sorted = sortJSON(data.ports, 'id', 'asc');
-				} else {
-					sorted = naturalSortJSON(data.ports, 'port');
-				}
-				var html = '<center><table><tr>';
-				for (var idx = 0; idx < sorted.length; idx++) {
-					html += '<td style="padding:5px;text-align:center"' + (sorted[idx].macs > 0 ? ' title="Połączonych klientów: ' + sorted[idx].macs + '"' : '') + '><i data-feather="wire' + (sorted[idx].speed > 0 ? '2' : '1') + '">x</i><br>' + portLabel(sorted[idx].port);
-					html += '<br>' + networkspeed(sorted[idx].speed);
-					html += '</td>';
-					if (((idx + 1) % 5) == 0 && (idx + 1) < sorted.length) {
-						html += '</tr><tr>';
-					}
-				}
-				html += '</tr></table></center>';
-				setValue('div_status_lan_ports', html);
-				feather.replace({'width':36, 'height':36});
-				setDisplay('div_status_lan_ports', true);
+			physicalports = data.ports;
+			portsmapping = data.ports_mapping;
+			var sorted;
+			if (portsmapping.length > 0) {
+				data.ports.forEach(e => {
+					var found = portsmapping.find(p => p.port === e.port);
+					e.id = found ? found.id : 0;
+				});
+				sorted = sortJSON(data.ports, 'id', 'asc');
 			} else {
-				setDisplay('div_status_lan_ports', false);
+				sorted = naturalSortJSON(data.ports, 'port');
 			}
+			var html = '<center><table><tr>';
+			for (var idx = 0; idx < sorted.length; idx++) {
+				html += '<td style="padding:5px;text-align:center"' + (sorted[idx].macs > 0 ? ' title="Połączonych klientów: ' + sorted[idx].macs + '"' : '') + '><i data-feather="wire' + (sorted[idx].speed > 0 ? '2' : '1') + '">x</i><br>' + portLabel(sorted[idx].port);
+				html += '<br>' + networkspeed(sorted[idx].speed);
+				html += '</td>';
+				if (((idx + 1) % 5) == 0 && (idx + 1) < sorted.length) {
+					html += '</tr><tr>';
+				}
+			}
+			html += '</tr></table></center>';
+			setValue('div_status_lan_ports', html);
+			feather.replace({'width':36, 'height':36});
+			setDisplay('div_status_lan_ports', true);
 		} else {
 			setDisplay('div_status_lan_ports', false);
 		}
+	} else {
+		setDisplay('div_status_lan_ports', false);
+	}
+}
+
+function showstatus() {
+	ubus_call('easyconfig', 'status', {}, function(data) {
+		simslot = data.simslot;
+		updateStatus(data);
 
 		if (data.mwan3_use_policy) {
 			switch (data.mwan3_use_policy) {
@@ -2479,11 +2938,8 @@ function showstatus() {
 			setDisplay('div_status_mwan3', false);
 		}
 
-		setValue('topo-router', config.system_hostname);
-		var isOffline = (data.wan_uptime == '' || !data.wan_tx || data.wan_tx == '0' || !data.wan_rx || data.wan_rx == '0');
-		toggleClass('topo-internet', 'down', isOffline);
-		toggleClass('l-1', 'down', isOffline);
-		setValue('topo-clients', data.wlan_clients + data.lan_clients);
+		topoUpdate(data);
+		topoStart();
 	});
 }
 
@@ -4445,7 +4901,21 @@ function clientscallback(sortby) {
 					html += '</div>';
 					html += '<div class="col-xs-2"></div>';
 				} else {
-					html += 'bezprzewodowo<br>' + hrband(sorted[idx].band) + ', ' + sorted[idx].signal + ' dBm</div>';
+					html += 'bezprzewodowo<br>';
+					switch (sorted[idx].band) {
+						case 2:
+							html += '<span class="topo-band topo-band-2g">' + hrband(sorted[idx].band) + '</span>';
+							break;
+						case 5:
+							html += '<span class="topo-band topo-band-5g">' + hrband(sorted[idx].band) + '</span>';
+							break;
+						case 6:
+							html += '<span class="topo-band topo-band-6g">' + hrband(sorted[idx].band) + '</span>';
+							break;
+						default:
+							html += hrband(sorted[idx].band) + ', ';
+					}
+					html += ' ' + sorted[idx].signal + ' dBm</div>';
 					html += '<div class="col-xs-2 hidden-xs"><span class="click" onclick="showbandwidth(\'' + sorted[idx].mac + '\',\'' + sorted[idx].section + '\');" title="wysłano">&uarr;&nbsp;' + bytesToSize(sorted[idx].tx) + '</span><br><span class="click" onclick="showbandwidth(\'' + sorted[idx].mac + '\',\'' + sorted[idx].section + '\');" title="pobrano">&darr;&nbsp;' + bytesToSize(sorted[idx].rx) + '</span></div>';
 				}
 				html += '<div class="col-xs-1 hidden-xs text-right"><span class="click" title="menu" onclick="hostmenu(' + sorted[idx].id + ');"><i data-feather="more-vertical"></i></span></div>';

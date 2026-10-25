@@ -111,6 +111,10 @@
 
 	<div id="div_status" style="display:none;">
 
+	<div class="topo" id="topo">
+		<div class="topo-path" id="topo-path"></div>
+	</div>
+
 	<div id="div_status_modem" style="display:none;">
 		<h3 class="section">Modem</h3>
 		<div class="row">
@@ -164,27 +168,6 @@
 
 	<div id="div_status_wan" style="display:none;">
 		<h3 class="section">Internet</h3>
-
-		<div class="topo" id="topo">
-			<div class="topo-node" id="topo-internet">
-				<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8" ry="19"/><path d="M5 24h38M8 14h32M8 34h32"/></svg>
-				<div class="topo-label">Internet</div>
-			</div>
-
-			<div class="topo-link" id="l-1"></div>
-
-			<div class="topo-node">
-				<svg viewBox="0 0 48 48"><rect x="5" y="27" width="38" height="13" rx="2"/><path d="M13 27V11M35 27V11M24 27v-8"/><circle cx="12" cy="33.5" r="1.2"/><circle cx="18" cy="33.5" r="1.2"/><path d="M30 33.5h8"/></svg>
-				<div class="topo-label" id="topo-router">Router</div>
-			</div>
-
-			<div class="topo-link"></div>
-
-			<div class="topo-node">
-				<svg viewBox="0 0 48 48"><rect x="3" y="18" width="9" height="19" rx="2"/><path d="M6.5 34h2"/><rect x="17" y="9" width="28" height="21" rx="3"/><path d="M31 30v7M24 37h14"/></svg>
-				<div class="topo-label"><a href="#" class="click" onclick="btn_pages('clients'); return false;">połączonych: <span id="topo-clients">0</span></a></div>
-			</div>
-		</div>
 
 		<div class="row">
 			<div class="col-xs-6 text-right">Liczba wznowień połączenia</div>
