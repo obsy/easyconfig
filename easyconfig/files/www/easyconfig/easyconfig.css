@@ -914,6 +914,10 @@ a.topo-node:focus {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     min-height: 0;
+    width: -moz-fit-content;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
   }
   .topo-node-gw,
   .topo-node-ap {
@@ -936,7 +940,7 @@ a.topo-node:focus {
   .topo-branch { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
   .topo-branch > .topo-node { justify-self: start; min-width: 200px; }
   .topo-branch-ssids { padding-left: 34px; }
-  .topo-branch-ssids .topo-node { max-width: none; align-self: stretch; }
+  .topo-branch-ssids .topo-node { align-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {
