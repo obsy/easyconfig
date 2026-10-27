@@ -5382,11 +5382,11 @@ function hostinfo(id) {
 	var host = clients.find(obj => obj.id == id);
 
 	var html = '';
-	html += createRowForModal('Nazwa', (host.username == '' ? '-' : escapeHTML(host.username)));
+	html += createRowForModal('Nazwa', '<span class="click" onclick="closeMsg();hostnameedit(' + host.id + ');">' + (host.username == '' ? '-' : escapeHTML(host.username)) + '</span>');
 	html += createRowForModal('MAC', host.mac);
 	html += createRowForModal('Producent', getmanuf(host.mac));
 	html += createRowForModal('Nazwa rzeczywista', (host.dhcpname == '' ? '-' : host.dhcpname));
-	html += createRowForModal('Typ klienta', defClientTypeOf[host.typeof] || host.typeof);
+	html += createRowForModal('Typ klienta', '<span class="click" onclick="closeMsg();hostnameedit(' + host.id + ');">' + (defClientTypeOf[host.typeof] || host.typeof) + '</span>');
 	html += createRowForModal('Typ połączenia', host.type == 1 ? 'przewodowo' : 'bezprzewodowo');
 	if (host.active) {
 		if (host.type == 1) {
