@@ -780,7 +780,6 @@ a.topo-node:focus {
 .topo-node-gw.topo-node-off .topo-ico { color: var(--tp-err); }
 .topo-node-gw.topo-node-off .topo-sub { color: var(--tp-err); }
 
-/* radio band chip and generation */
 .topo-band {
   display: inline-flex;
   align-items: center;
@@ -926,21 +925,32 @@ a.topo-node:focus {
   }
   .topo-link-label {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 4px 10px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
     padding: 0 0 0 44px;
   }
-  .topo-link-label > * { align-self: center; }
-  .topo-rate-up { grid-row: auto; }
-  .topo-link-below { flex-direction: row; gap: 10px; }
-  .topo-link-meta { margin-top: 0; }
+  .topo-link-label > * {
+    align-self: flex-start;
+  }
+  .topo-rate-up {
+    grid-row: auto;
+  }
+  .topo-link-below {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .topo-link-meta {
+    margin-top: 0;
+  }
   .topo-branches { padding-left: 34px; gap: 12px; }
   .topo-branch { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
-  .topo-branch > .topo-node { justify-self: start; min-width: 200px; }
+  .topo-branch > .topo-node { justify-self: start; min-width: 220px; }
   .topo-branch-ssids { padding-left: 34px; }
-  .topo-branch-ssids .topo-node { align-self: stretch; }
+  .topo-branch-ssids .topo-node { min-width: 220px }
 }
 
 @media (prefers-reduced-motion: reduce) {
