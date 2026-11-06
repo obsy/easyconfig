@@ -2417,7 +2417,7 @@ function topoGen(hwmode) {
 function topoClients(n) {
 	var m10 = n % 10, m100 = n % 100;
 	if (n == 1) { return '1 klient'; }
-	if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) { return n + ' klienci'; }
+	if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) { return n + ' klienty'; }
 	return n + ' klientów';
 }
 
