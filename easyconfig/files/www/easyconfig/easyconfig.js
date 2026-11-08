@@ -4677,7 +4677,7 @@ function clientscallback(sortby) {
 		html += '<span id="clients_filter_active" class="select-option" onclick="clientscallbackfilter(\'active\');clientscallback(\'\');">aktywni (0)</span>';
 		html += '<span id="clients_filter_all" class="select-option" onclick="clientscallbackfilter(\'all\');clientscallback(\'\');">wszyscy (0)</span>';
 		html += '</div>';
-		html += '<div class="col-xs-3 text-right"><span class="click" title="nowi klienci" onclick="clientsstats();"><i data-feather="bar-chart-2"></i></span></div>';
+		html += '<div class="col-xs-3 text-right"><span class="click" title="nowe klienty" onclick="clientsstats();"><i data-feather="bar-chart-2"></i></span></div>';
 		if (filterby == 'all') {
 			html += '<div class="col-xs-12 space">';
 			html += '<span>Pokaż</span>';
@@ -5146,7 +5146,7 @@ function clientscallback(sortby) {
 }
 
 function clientsstats() {
-	var html = 'Nowi klienci<br><br><div class="text-left">';
+	var html = 'Nowe klienty<br><br><div class="text-left">';
 	var html1;
 	var now = new Date();
 	var countdownYear = now.getFullYear();
@@ -5443,7 +5443,7 @@ function hostinfo(id) {
 			for (var hostKey of hostKeys) {
 				html += createRow3ColForModal(hrband(freq2band(remote_hosts[hostKey].freq)), remote_hosts[hostKey].n_assoc, escapeHTML(remote_hosts[hostKey].ssid));
 			}
-			html += '<hr><center>Zdalni klienci</center><br>';
+			html += '<hr><center>Zdalne klienty</center><br>';
 			var html1 = '';
 			for (var [mac, aps] of Object.entries(remote_clients)) {
 				for (var hostKey of hostKeys) {
