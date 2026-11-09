@@ -2236,8 +2236,9 @@ function showbandwidth(mac, section) {
 	html += '</div></div>';
 	html += '<div class="row" id="div_bandwidth"><div class="col-xs-12"><canvas id="bandwidth" height="400"></canvas></div></div>';
 	showMsg(html);
+	var bandwidth_busy = 0;
 	var bandwidth_arr = []; bandwidth_arr[0] = []; bandwidth_arr[1] = [];
-	var bandwidth_old = []; bandwidth_old['tx'] = -1;
+	var bandwidth_old = []; bandwidth_old['tx'] = -1; bandwidth_old['t'] = 0;
 	var bandwidth_max = []; bandwidth_max['tx'] = 0; bandwidth_max['rx'] = 0;
 	var txcolor = 'green';
 	var rxcolor = 'blue';
@@ -2251,12 +2252,7 @@ function showbandwidth(mac, section) {
 			var e = document.getElementById('bandwidth_all_tx');
 			if (!e || e.offsetParent === null) {
 				clearInterval(bandwidthID);
-				if (mac == '') {
-					if (bandwidth_old['tx'] > -1) {
-						setValue('wan_tx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['tx']) + '</span>');
-						setValue('wan_rx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['rx']) + '</span>');
-					}
-				} else {
+				if (mac) {
 					for (var idx = 0; idx < clients.length; idx++) {
 						if (clients[idx].mac == mac && clients[idx].active) {
 							if (bandwidth_old['tx'] > -1) {
@@ -2267,38 +2263,49 @@ function showbandwidth(mac, section) {
 							break;
 						}
 					}
+				} else {
+					if (bandwidth_old['tx'] > -1) {
+						setValue('wan_tx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['tx']) + '</span>');
+						setValue('wan_rx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['rx']) + '</span>');
+					}
 				}
 				return;
 			}
 			var path = null;
 			var method = null;
 			var message = null;
-			if (mac == '') {
-				path = 'network.device'
-				method = 'status'
-				message = { 'name': config.wan_ifname };
-			} else {
+			if (mac) {
 				path = 'easyconfig';
 				method = 'clientbandwidth';
 				message = { 'mac': mac, 'section': section };
+			} else {
+				path = 'network.device'
+				method = 'status'
+				message = { 'name': config.wan_ifname };
 			}
+			var sent = (new Date()).getTime();
+			if (bandwidth_busy && sent - bandwidth_busy < 5000) { return; }
+			bandwidth_busy = sent;
 			ubus_call_nomsg(path, method, message, function(data) {
+				bandwidth_busy = 0;
+				var now = (new Date()).getTime();
 				var tx = 0;
 				var rx = 0;
-				if (mac == '') {
-					tx = data.statistics.tx_bytes;
-					rx = data.statistics.rx_bytes;
-				} else {
+				if (mac) {
 					for (var idx = 0; idx < data.result.length; idx++) {
 						tx += data.result[idx].tx_bytes;
 						rx += data.result[idx].rx_bytes;
 					}
+				} else {
+					tx = data.statistics.tx_bytes;
+					rx = data.statistics.rx_bytes;
 				}
 				setValue('bandwidth_all_tx', bytesToSize(tx));
 				setValue('bandwidth_all_rx', bytesToSize(rx));
-				if (bandwidth_old['tx'] != -1) {
-					var dtx = tx - bandwidth_old['tx'];
-					var drx = rx - bandwidth_old['rx'];
+				if (bandwidth_old['tx'] != -1 && now > bandwidth_old['t']) {
+					var dt = (now - bandwidth_old['t']) / 1000;
+					var dtx = (tx - bandwidth_old['tx']) / dt;
+					var drx = (rx - bandwidth_old['rx']) / dt;
 					if (dtx < 0) { dtx = 0; }
 					if (drx < 0) { drx = 0; }
 					setValue('bandwidth_speed_tx', convertToSpeed(dtx));
@@ -2307,9 +2314,8 @@ function showbandwidth(mac, section) {
 					if (drx > bandwidth_max['rx']) { bandwidth_max['rx'] = drx; }
 					setValue('bandwidth_speed_max_tx', convertToSpeed(bandwidth_max['tx']));
 					setValue('bandwidth_speed_max_rx', convertToSpeed(bandwidth_max['rx']));
-					var timestamp = (new Date()).getTime();
-					bandwidth_arr[0].push([timestamp, dtx]);
-					bandwidth_arr[1].push([timestamp, drx]);
+					bandwidth_arr[0].push([now, dtx]);
+					bandwidth_arr[1].push([now, drx]);
 					if ((bandwidth_arr[0]).length > 181) {
 						bandwidth_arr[0].shift();
 						bandwidth_arr[1].shift();
@@ -2318,6 +2324,7 @@ function showbandwidth(mac, section) {
 				}
 				bandwidth_old['tx'] = tx;
 				bandwidth_old['rx'] = rx;
+				bandwidth_old['t'] = now;
 			});
 		}, 1000);
 	}
