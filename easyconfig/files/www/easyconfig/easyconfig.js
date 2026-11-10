@@ -2354,7 +2354,7 @@ var TOPO_BUSY = 50e3;
 var TOPO_RATE_MS = 2000;
 var TOPO_DATA_MS = 10000;
 
-var topo = { key: null, n: null, model: null, data: null, ifaces: [], counters: {}, rates: {}, wires: {}, rateTimer: null, dataTimer: null, pending: false, ro: null };
+var topo = { key: null, n: null, model: null, data: null, ifaces: [], counters: {}, rates: {}, wires: {}, rateTimer: null, dataTimer: null, pending: false, ro: null, pollBusy: 0, refreshBusy: 0 };
 
 function topoEl(tag, cls, kids) {
 	var e = document.createElement(tag);
@@ -2763,8 +2763,12 @@ function topoCount(key, dev, devs, now) {
 
 function topoPoll() {
 	if (!topoVisible()) { topoStop(); return; }
+	var sent = (new Date()).getTime();
+	if (topo.pollBusy && sent - topo.pollBusy < 5000) { return; }
+	topo.pollBusy = sent;
 	ubus_call_nomsg('network.device', 'status', {}, function(devs) {
-		if (!devs) { return; }
+		topo.pollBusy = 0;
+		if (!devs || !topo.rateTimer) { return; }
 		var now = (new Date()).getTime();
 		topoCount('wan', config.wan_ifname, devs, now);
 		for (var i = 0; i < topo.ifaces.length; i++) {
@@ -2776,7 +2780,12 @@ function topoPoll() {
 
 function topoRefresh() {
 	if (!topoVisible()) { topoStop(); return; }
+	var sent = (new Date()).getTime();
+	if (topo.refreshBusy && sent - topo.refreshBusy < 15000) { return; }
+	topo.refreshBusy = sent;
 	ubus_call_nomsg('easyconfig', 'status', {}, function(data) {
+		topo.refreshBusy = 0;
+		if (!topo.dataTimer) { return; }
 		updateStatus(data);
 		topoUpdate(data);
 	});
@@ -2792,6 +2801,8 @@ function topoStop() {
 	clearInterval(topo.dataTimer); topo.dataTimer = null;
 	topo.counters = {};
 	topo.rates = {};
+	topo.pollBusy = 0;
+	topo.refreshBusy = 0;
 }
 
 function updateStatus(data) {
