@@ -1124,15 +1124,12 @@ function ubus_call_noerror(path, method, message, callback) {
 
 function ubus_call_nomsg(path, method, message, callback) {
 	ubus(path, method, message, function(data) {
-		if (data.error) {
-		} else {
-			if (data.result[0] === 0) {
-				if (expires) {
-					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
-				}
-				callback(data.result[1]);
+		if (!data.error && data.result?.[0] === 0) {
+			if (expires) {
+				clearTimeout(expires);
+				expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
 			}
+			callback(data.result[1]);
 		}
 	}, null, false);
 }
@@ -2189,6 +2186,71 @@ var bandwidthID;
 var bandwidth_unit = false;
 var bandwidth_avg = false;
 
+var NETSTAT_MS = 1000;
+var NETSTAT_HIST = 180;
+
+var netstat = { timer: null, busy: 0, counters: {}, wanhist: [], onwan: null };
+
+function netstatVisible() {
+	var e = document.getElementById('div_status');
+	return !!(e && e.offsetParent !== null);
+}
+
+function netstatStore(key, dev, devs, now) {
+	var d = dev ? devs[dev] : null;
+	if (!d || !d.statistics) { return false; }
+	var rx = d.statistics.rx_bytes, tx = d.statistics.tx_bytes;
+	var old = netstat.counters[key];
+	if (key == 'wan' && old && now > old.t) {
+		var dt = (now - old.t) / 1000;
+		var drx = rx - old.rx, dtx = tx - old.tx;
+		if (drx < 0) { drx = 0; }
+		if (dtx < 0) { dtx = 0; }
+		netstat.wanhist.push({ t: now, rx: drx / dt, tx: dtx / dt });
+		if (netstat.wanhist.length > NETSTAT_HIST) { netstat.wanhist.shift(); }
+	}
+	netstat.counters[key] = { t: now, rx: rx, tx: tx };
+	return true;
+}
+
+function netstatPoll() {
+	var sent = (new Date()).getTime();
+	if (netstat.busy && sent - netstat.busy < 5000) { return; }
+	netstat.busy = sent;
+	ubus_call_nomsg('network.device', 'status', {}, function(devs) {
+		netstat.busy = 0;
+		if (!devs || !netstat.timer) { return; }
+		var now = (new Date()).getTime();
+		var wan = netstatStore('wan', config.wan_ifname, devs, now);
+		for (var i = 0; i < topo.ifaces.length; i++) {
+			netstatStore(topo.ifaces[i], topo.ifaces[i], devs, now);
+		}
+		if (wan && netstat.onwan) { netstat.onwan(); }
+	});
+}
+
+function netstatTick() {
+	if (!netstatVisible()) {
+		netstatStop();
+		return;
+	}
+	netstatPoll();
+}
+
+function netstatStart() {
+	if (netstat.timer) { return; }
+	netstat.timer = setInterval(netstatTick, NETSTAT_MS);
+	netstatPoll();
+}
+
+function netstatStop() {
+	clearInterval(netstat.timer); netstat.timer = null;
+	netstat.busy = 0;
+	netstat.counters = {};
+	netstat.wanhist = [];
+	netstat.onwan = null;
+}
+
 function convertToSpeed(val, fixedpow) {
 	var sizes;
 	if (bandwidth_unit) {
@@ -2236,23 +2298,51 @@ function showbandwidth(mac, section) {
 	html += '</div></div>';
 	html += '<div class="row" id="div_bandwidth"><div class="col-xs-12"><canvas id="bandwidth" height="400"></canvas></div></div>';
 	showMsg(html);
-	var bandwidth_busy = 0;
+	clearInterval(bandwidthID);
+	netstat.onwan = null;
 	var bandwidth_arr = []; bandwidth_arr[0] = []; bandwidth_arr[1] = [];
-	var bandwidth_old = []; bandwidth_old['tx'] = -1; bandwidth_old['t'] = 0;
 	var bandwidth_max = []; bandwidth_max['tx'] = 0; bandwidth_max['rx'] = 0;
 	var txcolor = 'green';
 	var rxcolor = 'blue';
 	if (document.body.classList.contains('darkmode')) { rxcolor = '#4CC2FF'; }
 	var bandwidth_legend = [{color: txcolor, elements: ['bandwidth_speed_label_tx', 'bandwidth_speed_tx', 'bandwidth_speed_max_tx']}, {color: rxcolor, elements: ['bandwidth_speed_label_rx', 'bandwidth_speed_rx', 'bandwidth_speed_max_rx']}];
 	livegraph.draw({element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend});
+
+	function bandwidthWanDraw() {
+		var h = netstat.wanhist;
+		var c = netstat.counters.wan;
+		if (c) {
+			setValue('bandwidth_all_tx', bytesToSize(c.tx));
+			setValue('bandwidth_all_rx', bytesToSize(c.rx));
+		}
+		if (h.length == 0) { return; }
+		var last = h[h.length - 1];
+		var from = last.t - 180000;
+		bandwidth_arr = [[], []];
+		for (var i = 0; i < h.length; i++) {
+			if (h[i].t < from) { continue; }
+			bandwidth_arr[0].push([h[i].t, h[i].tx]);
+			bandwidth_arr[1].push([h[i].t, h[i].rx]);
+			if (h[i].tx > bandwidth_max['tx']) { bandwidth_max['tx'] = h[i].tx; }
+			if (h[i].rx > bandwidth_max['rx']) { bandwidth_max['rx'] = h[i].rx; }
+		}
+		setValue('bandwidth_speed_tx', convertToSpeed(last.tx));
+		setValue('bandwidth_speed_rx', convertToSpeed(last.rx));
+		setValue('bandwidth_speed_max_tx', convertToSpeed(bandwidth_max['tx']));
+		setValue('bandwidth_speed_max_rx', convertToSpeed(bandwidth_max['rx']));
+		livegraph.draw( { element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend } );
+	}
+
 	if (config.wan_ifname != '' || mac) {
 		bandwidthcallback(false);
 		bandwidth_avg = false;
-		bandwidthID = setInterval(function() {
-			var e = document.getElementById('bandwidth_all_tx');
-			if (!e || e.offsetParent === null) {
-				clearInterval(bandwidthID);
-				if (mac) {
+		if (mac) {
+			var bandwidth_busy = 0;
+			var bandwidth_old = []; bandwidth_old['tx'] = -1; bandwidth_old['t'] = 0;
+			bandwidthID = setInterval(function() {
+				var e = document.getElementById('bandwidth_all_tx');
+				if (!e || e.offsetParent === null) {
+					clearInterval(bandwidthID);
 					for (var idx = 0; idx < clients.length; idx++) {
 						if (clients[idx].mac == mac && clients[idx].active) {
 							if (bandwidth_old['tx'] > -1) {
@@ -2263,70 +2353,63 @@ function showbandwidth(mac, section) {
 							break;
 						}
 					}
-				} else {
-					if (bandwidth_old['tx'] > -1) {
-						setValue('wan_tx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['tx']) + '</span>');
-						setValue('wan_rx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(bandwidth_old['rx']) + '</span>');
-					}
+					return;
 				}
-				return;
-			}
-			var path = null;
-			var method = null;
-			var message = null;
-			if (mac) {
-				path = 'easyconfig';
-				method = 'clientbandwidth';
-				message = { 'mac': mac, 'section': section };
-			} else {
-				path = 'network.device'
-				method = 'status'
-				message = { 'name': config.wan_ifname };
-			}
-			var sent = (new Date()).getTime();
-			if (bandwidth_busy && sent - bandwidth_busy < 5000) { return; }
-			bandwidth_busy = sent;
-			ubus_call_nomsg(path, method, message, function(data) {
-				bandwidth_busy = 0;
-				var now = (new Date()).getTime();
-				var tx = 0;
-				var rx = 0;
-				if (mac) {
+				var sent = (new Date()).getTime();
+				if (bandwidth_busy && sent - bandwidth_busy < 5000) { return; }
+				bandwidth_busy = sent;
+				ubus_call_nomsg('easyconfig', 'clientbandwidth', { 'mac': mac, 'section': section }, function(data) {
+					bandwidth_busy = 0;
+					var now = (new Date()).getTime();
+					var tx = 0;
+					var rx = 0;
 					for (var idx = 0; idx < data.result.length; idx++) {
 						tx += data.result[idx].tx_bytes;
 						rx += data.result[idx].rx_bytes;
 					}
-				} else {
-					tx = data.statistics.tx_bytes;
-					rx = data.statistics.rx_bytes;
-				}
-				setValue('bandwidth_all_tx', bytesToSize(tx));
-				setValue('bandwidth_all_rx', bytesToSize(rx));
-				if (bandwidth_old['tx'] != -1 && now > bandwidth_old['t']) {
-					var dt = (now - bandwidth_old['t']) / 1000;
-					var dtx = (tx - bandwidth_old['tx']) / dt;
-					var drx = (rx - bandwidth_old['rx']) / dt;
-					if (dtx < 0) { dtx = 0; }
-					if (drx < 0) { drx = 0; }
-					setValue('bandwidth_speed_tx', convertToSpeed(dtx));
-					setValue('bandwidth_speed_rx', convertToSpeed(drx));
-					if (dtx > bandwidth_max['tx']) { bandwidth_max['tx'] = dtx; }
-					if (drx > bandwidth_max['rx']) { bandwidth_max['rx'] = drx; }
-					setValue('bandwidth_speed_max_tx', convertToSpeed(bandwidth_max['tx']));
-					setValue('bandwidth_speed_max_rx', convertToSpeed(bandwidth_max['rx']));
-					bandwidth_arr[0].push([now, dtx]);
-					bandwidth_arr[1].push([now, drx]);
-					if ((bandwidth_arr[0]).length > 181) {
-						bandwidth_arr[0].shift();
-						bandwidth_arr[1].shift();
+					setValue('bandwidth_all_tx', bytesToSize(tx));
+					setValue('bandwidth_all_rx', bytesToSize(rx));
+					if (bandwidth_old['tx'] != -1 && now > bandwidth_old['t']) {
+						var dt = (now - bandwidth_old['t']) / 1000;
+						var dtx = (tx - bandwidth_old['tx']) / dt;
+						var drx = (rx - bandwidth_old['rx']) / dt;
+						if (dtx < 0) { dtx = 0; }
+						if (drx < 0) { drx = 0; }
+						setValue('bandwidth_speed_tx', convertToSpeed(dtx));
+						setValue('bandwidth_speed_rx', convertToSpeed(drx));
+						if (dtx > bandwidth_max['tx']) { bandwidth_max['tx'] = dtx; }
+						if (drx > bandwidth_max['rx']) { bandwidth_max['rx'] = drx; }
+						setValue('bandwidth_speed_max_tx', convertToSpeed(bandwidth_max['tx']));
+						setValue('bandwidth_speed_max_rx', convertToSpeed(bandwidth_max['rx']));
+						bandwidth_arr[0].push([now, dtx]);
+						bandwidth_arr[1].push([now, drx]);
+						if ((bandwidth_arr[0]).length > 181) {
+							bandwidth_arr[0].shift();
+							bandwidth_arr[1].shift();
+						}
+						livegraph.draw({element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend});
 					}
-					livegraph.draw({element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend});
+					bandwidth_old['tx'] = tx;
+					bandwidth_old['rx'] = rx;
+					bandwidth_old['t'] = now;
+				});
+			}, 1000);
+		} else {
+			netstat.onwan = function() {
+				var e = document.getElementById('bandwidth_all_tx');
+				if (!e || e.offsetParent === null) {
+					netstat.onwan = null;
+					var c = netstat.counters.wan;
+					if (c) {
+						setValue('wan_tx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(c.tx) + '</span>');
+						setValue('wan_rx', '<span class="click" onclick="showbandwidth(\'\',\'\');">' + bytesToSize(c.rx) + '</span>');
+					}
+					return;
 				}
-				bandwidth_old['tx'] = tx;
-				bandwidth_old['rx'] = rx;
-				bandwidth_old['t'] = now;
-			});
-		}, 1000);
+				bandwidthWanDraw();
+			};
+			bandwidthWanDraw();
+		}
 	}
 }
 
@@ -2354,7 +2437,7 @@ var TOPO_BUSY = 50e3;
 var TOPO_RATE_MS = 2000;
 var TOPO_DATA_MS = 10000;
 
-var topo = { key: null, n: null, model: null, data: null, ifaces: [], counters: {}, rates: {}, wires: {}, rateTimer: null, dataTimer: null, pending: false, ro: null, pollBusy: 0, refreshBusy: 0 };
+var topo = { key: null, n: null, model: null, data: null, ifaces: [], counters: {}, rates: {}, wires: {}, rateTimer: null, dataTimer: null, pending: false, ro: null, refreshBusy: 0 };
 
 function topoEl(tag, cls, kids) {
 	var e = document.createElement(tag);
@@ -2746,36 +2829,27 @@ function topoVisible() {
 	return !!(p && p.offsetParent !== null);
 }
 
-function topoCount(key, dev, devs, now) {
-	var d = dev ? devs[dev] : null;
-	if (!d || !d.statistics) { return; }
+function topoCount(key) {
+	var cur = netstat.counters[key];
+	if (!cur) { return; }
 	var old = topo.counters[key];
-	var rx = d.statistics.rx_bytes, tx = d.statistics.tx_bytes;
-	if (old && now > old.t) {
-		var dt = (now - old.t) / 1000;
-		var drx = rx - old.rx, dtx = tx - old.tx;
+	if (old && cur.t > old.t) {
+		var dt = (cur.t - old.t) / 1000;
+		var drx = cur.rx - old.rx, dtx = cur.tx - old.tx;
 		if (drx < 0) { drx = 0; }
 		if (dtx < 0) { dtx = 0; }
 		topo.rates[key] = { rx: drx * 8 / dt, tx: dtx * 8 / dt };
 	}
-	topo.counters[key] = { t: now, rx: rx, tx: tx };
+	topo.counters[key] = cur;
 }
 
-function topoPoll() {
+function topoTick() {
 	if (!topoVisible()) { topoStop(); return; }
-	var sent = (new Date()).getTime();
-	if (topo.pollBusy && sent - topo.pollBusy < 5000) { return; }
-	topo.pollBusy = sent;
-	ubus_call_nomsg('network.device', 'status', {}, function(devs) {
-		topo.pollBusy = 0;
-		if (!devs || !topo.rateTimer) { return; }
-		var now = (new Date()).getTime();
-		topoCount('wan', config.wan_ifname, devs, now);
-		for (var i = 0; i < topo.ifaces.length; i++) {
-			topoCount(topo.ifaces[i], topo.ifaces[i], devs, now);
-		}
-		topoPaint();
-	});
+	topoCount('wan');
+	for (var i = 0; i < topo.ifaces.length; i++) {
+		topoCount(topo.ifaces[i]);
+	}
+	topoPaint();
 }
 
 function topoRefresh() {
@@ -2792,7 +2866,7 @@ function topoRefresh() {
 }
 
 function topoStart() {
-	if (!topo.rateTimer) { topo.rateTimer = setInterval(topoPoll, TOPO_RATE_MS); }
+	if (!topo.rateTimer) { topo.rateTimer = setInterval(topoTick, TOPO_RATE_MS); }
 	if (!topo.dataTimer) { topo.dataTimer = setInterval(topoRefresh, TOPO_DATA_MS); }
 }
 
@@ -2801,7 +2875,6 @@ function topoStop() {
 	clearInterval(topo.dataTimer); topo.dataTimer = null;
 	topo.counters = {};
 	topo.rates = {};
-	topo.pollBusy = 0;
 	topo.refreshBusy = 0;
 }
 
@@ -2881,6 +2954,7 @@ function updateStatus(data) {
 }
 
 function showstatus() {
+	netstatStart();
 	ubus_call('easyconfig', 'status', {}, function(data) {
 		simslot = data.simslot;
 		updateStatus(data);
