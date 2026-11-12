@@ -46,7 +46,7 @@ function setTheme(mode) {
 	}
 }
 
-function showicon() {
+function showIcon() {
 	feather.replace({'width':18, 'height':18});
 }
 
@@ -131,10 +131,8 @@ async function loadDefDns() {
 }
 
 async function easyconfig_onload() {
-	showicon();
+	showIcon();
 	setTheme(getCookie('easyconfig_darkmode'));
-
-	var inittoken = '00000000000000000000000000000000';
 
 	var value;
 	var text;
@@ -154,32 +152,26 @@ async function easyconfig_onload() {
 	try {
 		defClientTypeOf = await loadDefClientTypeOf();
 		defDns = await loadDefDns();
-	} catch (err) {
-		console.error('Błąd wczytywania konfiguracji: ' + err.message);
+	} catch (e) {
+		console.error('Błąd wczytywania konfiguracji: ' + e.message);
 	}
 	defClientTypeOf[''] = 'nieokreślony';
 
-	token = getCookie('easyconfig_token');
-	if (token.length == 32) {
+	var inittoken = '00000000000000000000000000000000';
+	var cookieToken = getCookie('easyconfig_token');
+	currentSession.token = inittoken;
+	if (cookieToken.length == 32) {
+		currentSession.token = cookieToken;
 		ubus('session', 'list', {}, function(data) {
-			if (data.error) {
-				token = inittoken;
+			if (!data.error && data.result[0] === 0 && data.result[1] && data.result[1].ubus_rpc_session == cookieToken) {
+				loginok(data.result[1], true);
 			} else {
-				if (data.result[0] === 0) {
-					if (data.result[1].ubus_rpc_session == token) {
-						loginok(data.result[1], true);
-					} else {
-						token = inittoken;
-					}
-				} else {
-					token = inittoken;
-				}
+				currentSession.token = inittoken;
+				setCookie('easyconfig_token', '', -1);
 			}
 		}, function(status) {
-			token = inittoken;
+			currentSession.token = inittoken;
 		}, false);
-	} else {
-		token = inittoken;
 	}
 }
 
@@ -1014,22 +1006,19 @@ function showDialog(msg, default_value, primary_value, primary_callback) {
 
 var config;
 var modem = -1;
-var counter = 0;
-var token = '00000000000000000000000000000000';
-var expires;
-var timeout;
+var currentSession = { counter: 0, expiresTimeoutId: null, timeout: null, token: '00000000000000000000000000000000' };
 
 var ubus = function(path, method, message, successHandler, errorHandler, showWait) {
 	if (showWait) {
 		showMsg();
 	}
-	counter++;
+	currentSession.counter++;
 	var param = JSON.stringify({
 		'jsonrpc': '2.0',
-		'id': counter,
+		'id': currentSession.counter,
 		'method': 'call',
 		'params': [
-			token,
+			currentSession.token,
 			path,
 			method,
 			message
@@ -1040,24 +1029,22 @@ var ubus = function(path, method, message, successHandler, errorHandler, showWai
 		? new XMLHttpRequest()
 		: new ActiveXObject('Microsoft.XMLHTTP');
 	var responseTypeAware = 'responseType' in xhr;
-	xhr.open('post', window.location.origin + '/ubus', true);
-	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.open('post', window.location.origin + '/ubus/?' + (new Date()).getTime(), true);
+	xhr.setRequestHeader('Content-Type', 'application/json');
 
 	if (responseTypeAware) {
 		try {
 			xhr.responseType = 'json';
-		} catch(error) {
+		} catch(e) {
 			responseTypeAware = false;
 		}
 	}
 	xhr.onreadystatechange = function() {
 		var status = xhr.status;
 		if (xhr.readyState == 4) {
-			if (showWait) {
-				closeMsg();
-			}
+			if (showWait) { closeMsg(); }
 			if (status == 200) {
-				setCookie('easyconfig_token', token, timeout);
+				if (currentSession.timeout && !/^0+$/.test(currentSession.token)) { setCookie('easyconfig_token', currentSession.token, currentSession.timeout); }
 				successHandler && successHandler(
 					responseTypeAware
 					? xhr.response
@@ -1087,9 +1074,9 @@ function ubus_call(path, method, message, callback) {
 			ubus_error(data.error.code);
 		} else {
 			if (data.result[0] === 0) {
-				if (expires) {
-					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
+				if (currentSession.expiresTimeoutId) {
+					clearTimeout(currentSession.expiresTimeoutId);
+					currentSession.expiresTimeoutId = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, currentSession.timeout * 1000);
 				}
 				callback(data.result[1]);
 			} else {
@@ -1107,9 +1094,9 @@ function ubus_call_noerror(path, method, message, callback) {
 			ubus_error(data.error.code);
 		} else {
 			if (data.result[0] === 0) {
-				if (expires) {
-					clearTimeout(expires);
-					expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
+				if (currentSession.expiresTimeoutId) {
+					clearTimeout(currentSession.expiresTimeoutId);
+					currentSession.expiresTimeoutId = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, currentSession.timeout * 1000);
 				}
 				callback(data.result[1]);
 			} else {
@@ -1117,7 +1104,7 @@ function ubus_call_noerror(path, method, message, callback) {
 			}
 		}
 	}, function(status) {
-		var data = {killed:1};
+		var data = { killed: 1 };
 		callback(data);
 	}, true);
 }
@@ -1125,9 +1112,9 @@ function ubus_call_noerror(path, method, message, callback) {
 function ubus_call_nomsg(path, method, message, callback) {
 	ubus(path, method, message, function(data) {
 		if (!data.error && data.result?.[0] === 0) {
-			if (expires) {
-				clearTimeout(expires);
-				expires = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, timeout * 1000);
+			if (currentSession.expiresTimeoutId) {
+				clearTimeout(currentSession.expiresTimeoutId);
+				currentSession.expiresTimeoutId = setTimeout(function(){ document.getElementById('system_password').focus(); location.reload(); }, currentSession.timeout * 1000);
 			}
 			callback(data.result[1]);
 		}
@@ -1173,12 +1160,12 @@ function login() {
 }
 
 function loginok(session, showlastpage) {
-	token = session.ubus_rpc_session;
+	currentSession.token = session.ubus_rpc_session;
 
-	if (expires) { clearTimeout(expires); }
-	expires = setTimeout(function(){ location.reload(); }, session.expires * 1000);
-	timeout = session.timeout;
-	setCookie('easyconfig_token', token, timeout);
+	if (currentSession.expiresTimeoutId) { clearTimeout(currentSession.expiresTimeoutId); }
+	currentSession.expiresTimeoutId = setTimeout(function(){ location.reload(); }, session.expires * 1000);
+	currentSession.timeout = session.timeout;
+	setCookie('easyconfig_token', currentSession.token, session.expires);
 
 	if (getCookie('easyconfig_status_wan') === '1') {
 		setDisplay('div_status_wan', true);
@@ -1197,9 +1184,9 @@ function loginok(session, showlastpage) {
 		}
 	}
 
-	var clearid = null;
+	var clearId = null;
 	function waitForConfig(callback, page) {
-		clearid = window.setInterval(function() {
+		clearId = window.setInterval(function() {
 			if (typeof config != 'undefined' && typeof config.system_hostname != 'undefined') {
 				callback(page);
 			}
@@ -1207,7 +1194,7 @@ function loginok(session, showlastpage) {
 	}
 
 	function readyConfig(page) {
-		clearInterval(clearid);
+		clearInterval(clearId);
 		setDisplay('div_login', false);
 		setValue('system_password', '');
 		setDisplay('div_content', true);
@@ -1222,9 +1209,9 @@ function loginok(session, showlastpage) {
 
 function logout() {
 	ubus('session', 'destroy', {}, function(data) {
-		setCookie('easyconfig_token', '', 1);
-		setCookie('easyconfig_page', '', 1);
-		if (expires) { clearTimeout(expires); }
+		setCookie('easyconfig_token', '', -1);
+		setCookie('easyconfig_page', '', -1);
+		if (currentSession.expiresTimeoutId) { clearTimeout(currentSession.expiresTimeoutId); }
 		document.getElementById('system_password').focus();
 		location.reload();
 	}, function(status) {
@@ -3927,9 +3914,9 @@ function btn_system_reboot() {
 
 function okreboot() {
 	ubus('easyconfig', 'reboot', {}, function(data) {
-		token = '00000000000000000000000000000000';
-		setCookie('easyconfig_token', '', 1);
-		setCookie('easyconfig_page', '', 1);
+		currentSession.token = '00000000000000000000000000000000';
+		setCookie('easyconfig_token', '', -1);
+		setCookie('easyconfig_page', '', -1);
 		showMsg('Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...', false);
 	}, function(status) {
 		showMsg('Błąd pobierania danych!', true);
@@ -3942,9 +3929,9 @@ function btn_system_firstboot() {
 
 function okfirstboot() {
 	ubus('file', 'exec', { 'command': 'firstboot', 'params': [ '-r', '-y' ] }, function(data) {
-		token = '00000000000000000000000000000000';
-		setCookie('easyconfig_token', '', 1);
-		setCookie('easyconfig_page', '', 1);
+		currentSession.token = '00000000000000000000000000000000';
+		setCookie('easyconfig_token', '', -1);
+		setCookie('easyconfig_page', '', -1);
 		showMsg('Trwa ponowne uruchomienie urządzenia, może to potrwać kilka minut...', false);
 	}, function(status) {
 		showMsg('Błąd pobierania danych!', true);
@@ -5069,7 +5056,7 @@ function clientscallback(sortby) {
 		for (var idx = 0; idx < all.length; idx++) {
 			toggleClass('clients_showtype_' + all[idx], 'select-option-active', showtype == all[idx]);
 		}
-		showicon();
+		showIcon();
 
 		setValue('clients_filter_active', 'aktywni (' + counter_active + ')');
 		setValue('clients_filter_all', 'wszyscy (' + counter_all + ')');
@@ -6707,7 +6694,7 @@ function readsms() {
 			html += '<br><div class="alert alert-warning">Brak wiadomości</div>';
 		}
 		setValue('div_sms_content', html);
-		showicon();
+		showIcon();
 	});
 }
 
@@ -6974,7 +6961,7 @@ function showvpn() {
 				html += '</div>';
 			}
 			setValue('div_vpn_content', html);
-			showicon();
+			showIcon();
 		} else {
 			setValue('div_vpn_content', '<div class="alert alert-warning">Brak sieci VPN</div>');
 		}
@@ -8178,7 +8165,7 @@ function showadblock() {
 		html += '<p>Liczba domen: ' + allowlist.length + '</p>';
 		setValue('div_adblock_list_allowlist', html);
 
-		showicon();
+		showIcon();
 	});
 }
 
@@ -8620,7 +8607,7 @@ function showwol() {
 				html += '</div>';
 			}
 			setValue('div_wol_content', html);
-			showicon();
+			showIcon();
 			document.getElementById('btn_wol_wakeupall').disabled = false;
 		} else {
 			setValue('div_wol_content', '<div class="alert alert-warning">Brak urządzeń do wybudzenia</div>');
@@ -8633,7 +8620,7 @@ function woldetails(data) {
 	var json = {};
 	try {
 		json = JSON.parse(atob(data));
-	} catch (error) {
+	} catch (e) {
 		json.section = '';
 		json.description = '';
 		json.mac = '';
@@ -8773,7 +8760,7 @@ function shownetworks() {
 				html += '</div>';
 			}
 			setValue('div_networks_content', html);
-			showicon();
+			showIcon();
 		} else {
 			setValue('div_networks_content', '<div class="alert alert-warning">Brak sieci dodatkowych</div>');
 		}
@@ -9575,9 +9562,9 @@ function btn_pages(page) {
 	setDisplay('div_wol', (page == 'wol'));
 	setDisplay('div_security', (page == 'security'));
 
-	var clearid = null;
+	var clearId = null;
 	function waitForData(callback) {
-		clearid = window.setInterval(function() {
+		clearId = window.setInterval(function() {
 			if (modem != -1) {
 				callback();
 			}
@@ -9587,7 +9574,7 @@ function btn_pages(page) {
 	if (page == 'status') {
 		showstatus();
 		function readyDataStatus() {
-			clearInterval(clearid);
+			clearInterval(clearId);
 			showmodem();
 		}
 		waitForData(readyDataStatus);
@@ -9600,7 +9587,7 @@ function btn_pages(page) {
 	if (page == 'system') {
 		showsystem();
 		function readyDataSystem() {
-			clearInterval(clearid);
+			clearInterval(clearId);
 			showmodeminfo();
 		}
 		waitForData(readyDataSystem);
@@ -9667,7 +9654,7 @@ function btn_pages(page) {
 		logout();
 	}
 
-	setCookie('easyconfig_page', page, timeout);
+	setCookie('easyconfig_page', page, currentSession.timeout);
 }
 
 window.onload = easyconfig_onload;
