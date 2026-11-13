@@ -2241,22 +2241,22 @@ function netstatStop() {
 function convertToSpeed(val, fixedpow) {
 	var sizes;
 	if (bandwidth_unit) {
-		sizes = ['B/s', 'KiB/s', 'MiB/s', 'GiB/s'];
+		sizes = ['B/s', 'kB/s', 'MB/s', 'GB/s'];
 	} else {
-		sizes = ['bit/s', 'Kibit/s', 'Mibit/s', 'Gibit/s'];
+		sizes = ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s'];
 		val *= 8;
 	}
-	if (val == 0) return '0';
+	if (val == 0) { return '0'; }
 	var i;
 	if (fixedpow) {
 		i = fixedpow;
 	} else {
-		i = parseInt(Math.floor(Math.log(val) / Math.log(1024)));
+		i = parseInt(Math.floor(Math.log(val) / Math.log(1000)));
 	}
-	if (i < 0) return '0';
-	var dm = 0;
-	if (i > 1) {dm = 3;}
-	return parseFloat((val / Math.pow(1024, i)).toFixed(dm)) + ' ' + sizes[i];
+	if (i < 0) { return '0'; }
+	if (i > 3) { i = 3; }
+	var v = val / Math.pow(1000, i);
+	return ((i > 0 && v < 10) ? v.toFixed(1) : String(Math.round(v))) + ' ' + sizes[i];
 }
 
 function bandwidthcallback(val) {
@@ -4645,11 +4645,11 @@ var wifigraph = {
 
 function bytesToSize(bytes) {
 	var sizes = ['', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
-	if (bytes == 0) return '0';
+	if (bytes == 0) { return '0'; }
 	var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
 	var dm = 0;
-	if (i == 2) {dm = 1;}
-	if (i > 2) {dm = 3;}
+	if (i == 2) { dm = 1; }
+	if (i > 2) { dm = 3; }
 	return parseFloat((bytes / Math.pow(1024, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
@@ -9695,9 +9695,8 @@ var livegraph = {
 			ctx.textAlign = 'left';
 			offset = 5;
 		}
-		var t;
-		t = bandwidth_unit ? graph.max : graph.max * 8;
-		var pow = parseInt(Math.floor(Math.log(t) / Math.log(1024)));
+		var t = bandwidth_unit ? graph.max : graph.max * 8;
+		var pow = parseInt(Math.floor(Math.log(t) / Math.log(1000)));
 		for (var i = 1; i < 11; i++) {
 			var y = livegraph.getY(graph, i * graph.max / 10);
 			ctx.beginPath();
