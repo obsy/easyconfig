@@ -2169,10 +2169,6 @@ function showwanup(data) {
 	showMsg(html);
 }
 
-var bandwidthID;
-var bandwidth_unit = false;
-var bandwidth_avg = false;
-
 var NETSTAT_MS = 1000;
 var NETSTAT_HIST = 180;
 
@@ -2240,7 +2236,7 @@ function netstatStop() {
 
 function convertToSpeed(val, fixedpow) {
 	var sizes;
-	if (bandwidth_unit) {
+	if (bandwidth.showInBytes) {
 		sizes = ['B/s', 'kB/s', 'MB/s', 'GB/s'];
 	} else {
 		sizes = ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s'];
@@ -2259,16 +2255,18 @@ function convertToSpeed(val, fixedpow) {
 	return ((i > 0 && v < 10) ? v.toFixed(1) : String(Math.round(v))) + ' ' + sizes[i];
 }
 
+var bandwidth = { bandwidthTimer: null, showInBytes: false, showAvg: false };
+
 function bandwidthcallback(val) {
-	bandwidth_unit = val;
+	bandwidth.showInBytes = val;
 	toggleClass('bandwidth_bits', 'select-option-active', !val);
 	toggleClass('bandwidth_bytes', 'select-option-active', val);
 }
 
 function bandwidthcallbackavg() {
 	var e = document.getElementById('bandwidth_avg');
-	bandwidth_avg = !e.classList.contains('select-option-active');
-	toggleClass(e, 'select-option-active', bandwidth_avg);
+	bandwidth.showAvg = !e.classList.contains('select-option-active');
+	toggleClass(e, 'select-option-active', bandwidth.showAvg);
 }
 
 function showbandwidth(mac, section) {
@@ -2285,7 +2283,7 @@ function showbandwidth(mac, section) {
 	html += '</div></div>';
 	html += '<div class="row" id="div_bandwidth"><div class="col-xs-12"><canvas id="bandwidth" height="400"></canvas></div></div>';
 	showMsg(html);
-	clearInterval(bandwidthID);
+	clearInterval(bandwidth.bandwidthTimer); bandwidth.bandwidthTimer = null;
 	netstat.onwan = null;
 	var bandwidth_arr = []; bandwidth_arr[0] = []; bandwidth_arr[1] = [];
 	var bandwidth_max = []; bandwidth_max['tx'] = 0; bandwidth_max['rx'] = 0;
@@ -2293,7 +2291,7 @@ function showbandwidth(mac, section) {
 	var rxcolor = 'blue';
 	if (document.body.classList.contains('darkmode')) { rxcolor = '#4CC2FF'; }
 	var bandwidth_legend = [{color: txcolor, elements: ['bandwidth_speed_label_tx', 'bandwidth_speed_tx', 'bandwidth_speed_max_tx']}, {color: rxcolor, elements: ['bandwidth_speed_label_rx', 'bandwidth_speed_rx', 'bandwidth_speed_max_rx']}];
-	livegraph.draw({element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend});
+	livegraph.draw( { element: 'bandwidth', data: bandwidth_arr, legend: bandwidth_legend } );
 
 	function bandwidthWanDraw() {
 		var h = netstat.wanhist;
@@ -2322,14 +2320,14 @@ function showbandwidth(mac, section) {
 
 	if (config.wan_ifname != '' || mac) {
 		bandwidthcallback(false);
-		bandwidth_avg = false;
+		bandwidth.showAvg = false;
 		if (mac) {
 			var bandwidth_busy = 0;
 			var bandwidth_old = []; bandwidth_old['tx'] = -1; bandwidth_old['t'] = 0;
-			bandwidthID = setInterval(function() {
+			bandwidth.bandwidthTimer = setInterval(function() {
 				var e = document.getElementById('bandwidth_all_tx');
 				if (!e || e.offsetParent === null) {
-					clearInterval(bandwidthID);
+					clearInterval(bandwidth.bandwidthTimer); bandwidth.bandwidthTimer = null;
 					for (var idx = 0; idx < clients.length; idx++) {
 						if (clients[idx].mac == mac && clients[idx].active) {
 							if (bandwidth_old['tx'] > -1) {
@@ -9695,7 +9693,7 @@ var livegraph = {
 			ctx.textAlign = 'left';
 			offset = 5;
 		}
-		var t = bandwidth_unit ? graph.max : graph.max * 8;
+		var t = bandwidth.showInBytes ? graph.max : graph.max * 8;
 		var pow = parseInt(Math.floor(Math.log(t) / Math.log(1000)));
 		for (var i = 1; i < 11; i++) {
 			var y = livegraph.getY(graph, i * graph.max / 10);
@@ -9752,14 +9750,14 @@ var livegraph = {
 				x = livegraph.getX(graph, data[idx][i][0]);
 				y = livegraph.getY(graph, data[idx][i][1]);
 				ctx.lineTo(x, y);
-				if (bandwidth_avg) { avg += data[idx][i][1]; }
+				if (bandwidth.showAvg) { avg += data[idx][i][1]; }
 			}
 			if (fill) {
 				ctx.lineTo(x, livegraph.axisTop + graph.height);
 				ctx.fill();
 			} else {
 				ctx.stroke();
-				if (bandwidth_avg) {
+				if (bandwidth.showAvg) {
 					var val = avg / data[idx].length;
 					y = livegraph.getY(graph, val);
 					ctx.lineWidth = 0.8;
