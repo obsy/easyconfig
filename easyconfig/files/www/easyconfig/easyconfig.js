@@ -920,21 +920,21 @@ function enableWan(proto) {
 	}
 
 	if (proto == '3g' || proto == 'mbim' || proto == 'ncm' || proto == 'qmi' || proto == 'xmm') {
-		modem = 1;
+		config.services.hasModem = true;
 		setDisplay('menu_ussdsms', config.services.ussdsms);
 		setDisplay('div_status_modem', true);
 		setDisplay('div_system_modem', true);
 		setCookie('easyconfig_status_modem', '1');
 		setDisplay('div_modem_modemat', true);
 	} else if (proto == 'modemmanager') {
-		modem = 1;
+		config.services.hasModem = true;
 		setDisplay('menu_ussdsms', false);
 		setDisplay('div_status_modem', true);
 		setDisplay('div_system_modem', true);
 		setCookie('easyconfig_status_modem', '1');
 		setDisplay('div_modem_modemat', false);
 	} else {
-		modem = 0;
+		config.services.hasModem = false;
 		setDisplay('menu_ussdsms', false);
 		setDisplay('div_status_modem', false);
 		setDisplay('div_system_modem', false);
@@ -1005,7 +1005,6 @@ function showDialog(msg, default_value, primary_value, primary_callback) {
 }
 
 var config;
-var modem = -1;
 var currentSession = { counter: 0, expiresTimeoutId: null, timeout: null, token: '00000000000000000000000000000000' };
 
 var ubus = function(path, method, message, successHandler, errorHandler, showWait) {
@@ -3066,8 +3065,8 @@ function showsystem() {
 	});
 }
 
-function showmodeminfo() {
-	if (modem == 0) { return; }
+function showModemInfo() {
+	if (!config.services.hasModem) { return; }
 	ubus_call('easyconfig', 'modeminfo', {}, function(data) {
 		setValue('modem_vendor', data.vendor ? data.vendor : '-');
 		setValue('modem_model', data.product ? data.product : '-');
@@ -3372,8 +3371,8 @@ function restartwan(modal) {
 
 var arrmodemaddon = [];
 
-function showmodem() {
-	if (modem == 0) { return; }
+function showModem() {
+	if (!config.services.hasModem) { return; }
 	ubus_call('easyconfig', 'modem', {}, function(data) {
 		if (data.error)
 			return;
@@ -9563,9 +9562,7 @@ function btn_pages(page) {
 	var clearId = null;
 	function waitForData(callback) {
 		clearId = window.setInterval(function() {
-			if (modem != -1) {
-				callback();
-			}
+			if (config.services.hasModem) { callback(); }
 		}, 100);
 	}
 
@@ -9573,7 +9570,7 @@ function btn_pages(page) {
 		showstatus();
 		function readyDataStatus() {
 			clearInterval(clearId);
-			showmodem();
+			showModem();
 		}
 		waitForData(readyDataStatus);
 	}
@@ -9586,7 +9583,7 @@ function btn_pages(page) {
 		showsystem();
 		function readyDataSystem() {
 			clearInterval(clearId);
-			showmodeminfo();
+			showModemInfo();
 		}
 		waitForData(readyDataSystem);
 	}
