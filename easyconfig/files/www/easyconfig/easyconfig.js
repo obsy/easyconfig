@@ -3172,8 +3172,11 @@ function modembands4g() {
 	closemodembands4g();
 	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
-			var modem = JSON.parse(data.stdout);
-			if (modem.error) {
+			var modem = null;
+			try {
+				modem = JSON.parse(data.stdout);
+			} catch (e) {}
+			if (!modem || modem.error) {
 				showMsg('Obsługa pasm LTE nie jest dostępna');
 				return;
 			}
@@ -3230,8 +3233,11 @@ function modembands5gnsa() {
 	closemodembands5gnsa();
 	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
-			var modem = JSON.parse(data.stdout);
-			if (modem.error || (modem.supported5gnsa).length == 0) {
+			var modem = null;
+			try {
+				modem = JSON.parse(data.stdout);
+			} catch(e) {}
+			if (!modem || modem.error || (modem.supported5gnsa).length == 0) {
 				showMsg('Obsługa pasm 5G NSA nie jest dostępna');
 				return;
 			}
@@ -3288,8 +3294,11 @@ function modembands5gsa() {
 	closemodembands5gsa();
 	ubus_call('file', 'exec', { 'command': 'modemband.sh', 'params': [ 'json' ] }, function(data) {
 		if (data.code == 0) {
-			var modem = JSON.parse(data.stdout);
-			if (modem.error || (modem.supported5gsa).length == 0) {
+			var modem = null;
+			try {
+				modem = JSON.parse(data.stdout);
+			} catch(e) {}
+			if (!modem || modem.error || (modem.supported5gsa).length == 0) {
 				showMsg('Obsługa pasm 5G SA nie jest dostępna');
 				return;
 			}
